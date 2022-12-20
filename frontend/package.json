@@ -1,18 +1,24 @@
 {
-    "project": "...",
-    "devDependencies": {
-        "@babel/cli": "^7.19.3",
-        "@babel/core": "^7.20.5",
-        "@babel/plugin-proposal-do-expressions": "^7.18.6",
-        "@vitejs/plugin-react": "^3.0.0",
-        "axios": "^1.2.1",
-        "extensible-runtime": "^4.1.0",
-        "immutable": "^4.1.0",
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
-        "styled-components": "^5.3.6",
-        "superagent": "^8.0.6",
-        "vite": "^4.0.2",
-        "vite-require": "^0.2.3"
-    }
+  "name": "12.2022 DUTC Capstone",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.19.3",
+    "@babel/core": "^7.20.5",
+    "@babel/plugin-proposal-do-expressions": "^7.18.6",
+    "@vitejs/plugin-react": "^3.0.0",
+    "axios": "^1.2.1",
+    "extensible-runtime": "^4.1.0",
+    "immutable": "^4.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "styled-components": "^5.3.6",
+    "superagent": "^8.0.6",
+    "vite": "^4.0.2",
+    "vite-require": "^0.2.3"
+  }
 }
