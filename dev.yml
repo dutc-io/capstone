@@ -1,0 +1,14 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.dockerfile
+    volumes:
+        - ./frontend:/app
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.dockerfile
+    volumes:
+        - ./backend:/app
