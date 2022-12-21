@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: docker/frontend.dockerfile
+    environment:
+      PYTHONHASHSEED: 0
     volumes:
         - ./frontend:/app
 

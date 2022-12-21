@@ -29,19 +29,19 @@ class Card(namedtuple('Card', 'rank suit')):
         Suit.Spade:    '\N{black spade suit}',
     }
     RANKS = {
-        Rank.Two:    '2',
-        Rank.Three:  '3',
-        Rank.Four:   '4',
-        Rank.Five:   '5',
-        Rank.Six:    '6',
-        Rank.Seven:  '7',
-        Rank.Eight:  '8',
-        Rank.Nine:   '9',
-        Rank.Ten:    '10',
-        Rank.Jack:   'J',
-        Rank.Queen:  'Q',
-        Rank.King:   'K',
-        Rank.Ace:    'A',
+        Rank.Two:    ' 2 ',
+        Rank.Three:  ' 3 ',
+        Rank.Four:   ' 4 ',
+        Rank.Five:   ' 5 ',
+        Rank.Six:    ' 6 ',
+        Rank.Seven:  ' 7 ',
+        Rank.Eight:  ' 8 ',
+        Rank.Nine:   ' 9 ',
+        Rank.Ten:    ' 10',
+        Rank.Jack:   ' J ',
+        Rank.Queen:  ' Q ',
+        Rank.King:   ' K ',
+        Rank.Ace:    ' A ',
     }
     VALUES = {
         Rank.Ace:    1,
@@ -62,7 +62,9 @@ class Card(namedtuple('Card', 'rank suit')):
 
     @cached_property
     def symbol(self):
-        return f'{self.RANKS[self.rank]}{self.SUITS[self.suit]}'
+        if self.suit in {Suit.Heart, Suit.Diamond}:
+            return f'\033[1;41m{self.RANKS[self.rank]}{self.SUITS[self.suit]}\033[1;37;0m'
+        return f'\033[1;7m{self.RANKS[self.rank]}{self.SUITS[self.suit]}\033[1;37;0m'
 
 STANDARD_DECK = [Card(r, s) for r, s in product(Rank, Suit)]
 
@@ -92,7 +94,7 @@ class Unit:
 
     def render(self):
         if len(self.cards):
-            return '【{}】'.format(' '.join(c.symbol for c in self.cards))
+            return '【{}】'.format(' '.join(c.symbol.lstrip() for c in self.cards))
         return ' '.join(c.symbol for c in self.cards)
 
     def __or__(self, other):
@@ -142,7 +144,7 @@ class State:
         table.add(Unit.from_card(card))
         hand.add(deck.pop())
 
-        return replace(self, deck=deck, table=frozenset(table), hands={**self.hands, pl: frozenset(hand)})
+        return replace(self, deck=deck, table=frozenset(table), hands={**self.hands, player: frozenset(hand)})
 
     def with_build(self, player, card, *targets):
         deck = [*self.deck]
@@ -171,44 +173,53 @@ class State:
         return replace(self, deck=deck, table=frozenset(table), hands={**self.hands, pl: frozenset(hand)})
 
     def render(self):
-        return [
-            f'Table: {" ".join(u.render() for u in self.table)}',
+        return (
+            f"Table: {' '.join(u.render() for u in self.table)}\n",
             *(
-                f'{pl.name:<10} {" ".join(c.symbol for c in h)}'
-                for pl, h in sorted(self.hands.items(), key=lambda pl_h: pl_h[0].name)
-            ),
-        ]
+                f"{p.name:<8} {'  '.join(c.symbol for c in h)}" 
+                for p, h in sorted(self.hands.items(), key=lambda pl_h: pl_h[0].name)
+            )
+        )
 
-if __name__ == '__main__':
+def game(players):
     rnd = Random(0)
 
     deck = [c for c in STANDARD_DECK]
     rnd.shuffle(deck)
 
+    state = State.from_players(deck, *players)
+    state = state.with_deal()
+    
+    return state
+
+if __name__ == '__main__':
+    
     players = {
         Player.from_name(name)
         for name in 'Cameron Emmet Jef Michel'.split()
     }
-    state = State.from_players(deck, *players)
-    state = state.with_deal()
+
+    state = game(players)
     print(
         '\n'.join(state.render()),
         sep='\n', end='\n\n',
     )
 
-    pl = [*players][0]
 
+    pl = [*players][0]
     c = [*state.hands[pl]][0]
     state = state.with_discard(pl, c)
 
+    print(" ")
     print(
         f'{pl.name} discards {c.symbol}',
         '\n'.join(state.render()),
         sep='\n', end='\n\n',
     )
 
+    pl = [*players][1]
     c = [*state.hands[pl]][-1]
-    t = [*state.table][-1]
+    t = [*state.table][-2]
     state = state.with_build(pl, c, t)
 
     print(
@@ -217,8 +228,9 @@ if __name__ == '__main__':
         sep='\n', end='\n\n',
     )
 
-    c = [*state.hands[pl]][2]
-    t = [*state.table][2]
+    pl = [*players][2]
+    c = [*state.hands[pl]][3]
+    t = [*state.table][-1]
     state = state.with_capture(pl, c, t)
 
     print(
