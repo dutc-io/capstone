@@ -152,7 +152,7 @@ class Game(SimpleNamespace):
 
         print(" ")
         print(
-            f'{player.name} discards {card.symbol}',
+            f'{player.name} captures {target.symbol}',
             '\n'.join(state.render()),
             sep='\n', end='\n\n',
         )

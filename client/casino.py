@@ -27,12 +27,11 @@ def make_params(args):
 
     if args.game:
         params['game'] = args.game
-
-    if args.target:
+    
+    # Hmmm... Wthat the...
+    if args.target or args.target == 0:
         params['target'] = args.target
-    if args.card:
-        params['card'] = args.card
-    if args.card:
+    if args.card or args.card == 0:
         params['card'] = args.card
 
     return params
