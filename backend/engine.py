@@ -156,7 +156,7 @@ class State:
         table.add(reduce(or_, {*targets, Unit.from_card(card)}))
         hand.add(deck.pop())
 
-        return replace(self, deck=deck, table=frozenset(table), hands={**self.hands, pl: frozenset(hand)})
+        return replace(self, deck=deck, table=frozenset(table), hands={**self.hands, player: frozenset(hand)})
 
     def with_capture(self, player, card, *targets):
         deck = [*self.deck]
@@ -170,7 +170,7 @@ class State:
         table.difference_update(targets)
         hand.add(deck.pop())
 
-        return replace(self, deck=deck, table=frozenset(table), hands={**self.hands, pl: frozenset(hand)})
+        return replace(self, deck=deck, table=frozenset(table), hands={**self.hands, player: frozenset(hand)})
 
     def render(self):
         return (
