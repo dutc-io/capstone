@@ -37,14 +37,13 @@ class WsTest(SimpleNamespace):
 
 
 class Game(SimpleNamespace):
+
     async def new_game(request):
 
         requested_players = None
         try:
             body = loads(await request.json())
             requested_players = body["players"]
-            players = {Player.from_name(name) for name in requested_players}
-
             if len(requested_players) == 0:
                 return JSONResponse(
                     {"error": "Must supply players names"}, status_code=412
@@ -53,10 +52,11 @@ class Game(SimpleNamespace):
                 return JSONResponse(
                     {"error": "Too many players, must be six or less"}, status_code=412
                 )
+            players = {Player.from_name(name) for name in requested_players}
         except Exception as e:
-            # Just for testing
             return JSONResponse({"error": f"{e}"}, status_code=412)
-
+        
+        # XXX: This seems a bit verbose.
         id = uuid4().hex
         GAMES[id] = game(players)
 
@@ -65,33 +65,32 @@ class Game(SimpleNamespace):
     async def discard(request):
         try:
             body = loads(await request.json())
-
-            # XXX: Need to validate all of these
+            
+            # Make sure a gamge exists
             current = body["game"]
-            player = body["player"]
-            card = int(body["card"])
-
-            print(f"{current!r} {player!r} {card!r}")
-            
+            if current not in GAMES:
+                return JSONResponse({"error": f"Unable to find game {current!r}"}, status_code=412)
             state = GAMES[current] 
-            
-            # HACK: for now to find the player
-            pl = [p for p in state.players if p.name == player]
+
+            # XXX: Hack for now to retrieve the player by name. Maybe we should
+            # have better way to do this.
+            pl = [p for p in state.players if p.name == body["player"]]
             if not pl:
                 return JSONResponse({"error": "Could not fine {player!r}"}, status_code=412)
-            selected_player = pl[0]
+            player = pl[0]
             
-            # XXX: Should use logging
-            print(f"{selected_player}")
-            print(f"{state.hands[selected_player]}")
-            print(f"{card}")
+            try:
+                card = [*state.hands[player]][body["card"]]
+            except IndexError:
+                return JSONResponse({"error": f"Unable to find card {body['card']}"}, status_code=412)
+            except Exception as e:
+                return JSONResponse({"error": f"{e}"}, status_code=412)
 
-            c = [*state.hands[selected_player]][card]
-            state = state.with_discard(selected_player, c)
+            state = state.with_discard(player, card)
 
             print(" ")
             print(
-                f'{selected_player.name} discards {c.symbol}',
+                f'{player.name} discards {card.symbol}',
                 '\n'.join(state.render()),
                 sep='\n', end='\n\n',
             )
@@ -99,7 +98,7 @@ class Game(SimpleNamespace):
             GAMES[current] = state
         except Exception as e:
             return JSONResponse({"error": f"{e}"}, status_code=412)
-
+        
         return JSONResponse({"message": "discard accepted"}, status_code=200)
 
     async def build(request):
