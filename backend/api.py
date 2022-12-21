@@ -1,15 +1,18 @@
-from starlette.applications import Starlette
-from starlette.routing import Route, WebSocketRoute, Mount
-from starlette.responses import JSONResponse
+from types import SimpleNamespace
 from asyncio import sleep
 from itertools import count
-from typing import SimpleNamespace
+
+from starlette.routing import Mount, Route, WebSocketRoute
+from starlette.responses import JSONResponse
+from starlette.websockets import WebSocket
+from starlette.applications import Starlette
+
 
 class Test(SimpleNamespace):
     async def simple(request):
         return JSONResponse({'success': True})
 
-class WsTest(SimpleNameSpace):
+class WsTest(SimpleNamespace):
     async def simple(socket):
         await socket.accept()
         await socket.send_json({'success': True})
@@ -45,7 +48,7 @@ v1_routes = [
     Route('/build/{game}/{player}',        Game.build),
     Route('/capture/{game}/{player}',      Game.capture),
     Route('/state/{game}/{player}',        Game.state),
-    WebSocket('/ws_state/{game}/{player}', Game.ws_state)
+    WebSocketRoute('/ws_state/{game}/{player}', Game.ws_state)
 ]
 
 routes = [

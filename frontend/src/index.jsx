@@ -2,11 +2,13 @@ import { createRoot } from 'react-dom/client'
 import { get } from 'superagent'
 import { useState, useEffect } from 'react'
 
+const API = '127.0.0.1:8000'
+
 const Counter = () => {
     const [ ready, setReady ] = useState(false)
     const [ count, setCount ] = useState({local: null, remote: null})
     useEffect(() => {
-        const ws = new WebSocket(`ws://${document.location.host}/wsapi/ws`)
+        const ws = new WebSocket(`ws://${API}/wstest/counter`)
         ws.onopen = event => {
             setReady(true)
         }
