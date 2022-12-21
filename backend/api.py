@@ -58,7 +58,13 @@ class Game(SimpleNamespace):
         
         # XXX: This seems a bit verbose.
         id = uuid4().hex
-        GAMES[id] = game(players)
+        state = game(players)
+        GAMES[id] = state
+
+        print(
+            '\n'.join(state.render()),
+            sep='\n', end='\n\n',
+        )
 
         return JSONResponse({"game": id}, status_code=200)
 
@@ -86,7 +92,10 @@ class Game(SimpleNamespace):
             except Exception as e:
                 return JSONResponse({"error": f"{e}"}, status_code=412)
 
-            state = state.with_discard(player, card)
+            try:
+                state = state.with_discard(player, card)
+            except ValueError:
+                return JSONResponse({"Rejected": f"Unable to discard {player!r} {card!r}"}, status_code=412)
 
             print(" ")
             print(
@@ -106,11 +115,56 @@ class Game(SimpleNamespace):
         return JSONResponse({"message": "Not Implemented"}, status_code=501)
 
     async def capture(request):
-        # takes a game, player, card and target
-        return JSONResponse({"message": "Not Implemented"}, status_code=501)
+        # try:
+        body = loads(await request.json())
+        
+        # Make sure a gamge exists
+        current = body["game"]
+        if current not in GAMES:
+            return JSONResponse({"error": f"Unable to find game {current!r}"}, status_code=412)
+        state = GAMES[current] 
+
+        # XXX: Hack for now to retrieve the player by name. Maybe we should
+        # have better way to do this.
+        pl = [p for p in state.players if p.name == body["player"]]
+        if not pl:
+            return JSONResponse({"error": "Could not find {player!r}"}, status_code=412)
+        player = pl[0]
+        
+        try:
+            card = [*state.hands[player]][body["card"]]
+        except IndexError:
+            return JSONResponse({"error": f"Unable to find card {body['card']}"}, status_code=412)
+        except Exception as e:
+            return JSONResponse({"error": f"{e}"}, status_code=412)
+
+        try:
+            target = [*state.table][body["target"]]
+        except IndexError:
+            return JSONResponse({"error": f"Unable to find card {body['target']}"}, status_code=412)
+        except Exception as e:
+            return JSONResponse({"error": f"{e}"}, status_code=412)
+        
+        try:
+            state = state.with_capture(player, card, target)
+        except ValueError:
+            return JSONResponse({"Rejected": f"Unable to capture {player!r} {card!r} {target!r}"}, status_code=412)
+
+        print(" ")
+        print(
+            f'{player.name} discards {card.symbol}',
+            '\n'.join(state.render()),
+            sep='\n', end='\n\n',
+        )
+
+        GAMES[current] = state
+        # except Exception as e:
+        #     return JSONResponse({"error": f"{e}"}, status_code=412)
+        
+        return JSONResponse({"message": "capture accepted"}, status_code=200)
 
     async def state(request):
-        # takes a game, player, card and target
+        # TODO: Need to write an StateEncoder?
         return JSONResponse({"message": "Not Implemented"}, status_code=501)
 
     async def ws_state(socket):
