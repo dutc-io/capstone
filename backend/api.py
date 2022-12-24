@@ -77,34 +77,28 @@ class Game(SimpleNamespace):
             if current not in GAMES:
                 return JSONResponse({"error": f"Unable to find game {current!r}"}, status_code=412)
             state = GAMES[current] 
-
-            # XXX: Hack for now to retrieve the player by name. Maybe we should
-            # have better way to do this.
-            pl = [p for p in state.players if p.name == body["player"]]
-            if not pl:
-                return JSONResponse({"error": "Could not fine {player!r}"}, status_code=412)
-            player = pl[0]
             
-            try:
-                card = [*state.hands[player]][body["card"]]
-            except IndexError:
-                return JSONResponse({"error": f"Unable to find card {body['card']}"}, status_code=412)
-            except Exception as e:
-                return JSONResponse({"error": f"{e}"}, status_code=412)
+            with state.players_turn(body["player"]) as player:
+                try:
+                    card = [*state.hands[player]][body["card"]]
+                except IndexError:
+                    return JSONResponse({"error": f"Unable to find card {body['card']}"}, status_code=412)
+                except Exception as e:
+                    return JSONResponse({"error": f"{e}"}, status_code=412)
 
-            try:
-                state = state.with_discard(player, card)
-            except ValueError:
-                return JSONResponse({"Rejected": f"Unable to discard {player!r} {card!r}"}, status_code=412)
+                try:
+                    state = state.with_discard(player, card)
+                except ValueError:
+                    return JSONResponse({"Rejected": f"Unable to discard {player!r} {card!r}"}, status_code=412)
 
-            print(" ")
-            print(
-                f'{player.name} discards {card.symbol}',
-                '\n'.join(state.render()),
-                sep='\n', end='\n\n',
-            )
+                print(" ")
+                print(
+                    f'{player.name} discards {card.symbol}',
+                    '\n'.join(state.render()),
+                    sep='\n', end='\n\n',
+                )
 
-            GAMES[current] = state
+                GAMES[current] = state
         except Exception as e:
             return JSONResponse({"error": f"{e}"}, status_code=412)
         
@@ -120,40 +114,34 @@ class Game(SimpleNamespace):
                 return JSONResponse({"error": f"Unable to find game {current!r}"}, status_code=412)
             state = GAMES[current] 
 
-            # XXX: Hack for now to retrieve the player by name. Maybe we should
-            # have better way to do this.
-            pl = [p for p in state.players if p.name == body["player"]]
-            if not pl:
-                return JSONResponse({"error": "Could not find {player!r}"}, status_code=412)
-            player = pl[0]
-            
-            try:
-                card = [*state.hands[player]][body["card"]]
-            except IndexError:
-                return JSONResponse({"error": f"Unable to find card {body['card']}"}, status_code=412)
-            except Exception as e:
-                return JSONResponse({"error": f"{e}"}, status_code=412)
+            with state.players_turn(body["player"]) as player:
+                try:
+                    card = [*state.hands[player]][body["card"]]
+                except IndexError:
+                    return JSONResponse({"error": f"Unable to find card {body['card']}"}, status_code=412)
+                except Exception as e:
+                    return JSONResponse({"error": f"{e}"}, status_code=412)
 
-            try:
-                target = [*state.table][body["target"]]
-            except IndexError:
-                return JSONResponse({"error": f"Unable to find card {body['target']}"}, status_code=412)
-            except Exception as e:
-                return JSONResponse({"error": f"{e}"}, status_code=412)
-            
-            try:
-                state = state.with_build(player, card, target)
-            except ValueError:
-                return JSONResponse({"Rejected": f"Unable to build {player!r} {card!r} {target!r}"}, status_code=412)
+                try:
+                    target = [*state.table][body["target"]]
+                except IndexError:
+                    return JSONResponse({"error": f"Unable to find card {body['target']}"}, status_code=412)
+                except Exception as e:
+                    return JSONResponse({"error": f"{e}"}, status_code=412)
+                
+                try:
+                    state = state.with_build(player, card, target)
+                except ValueError:
+                    return JSONResponse({"Rejected": f"Unable to build {player!r} {card!r} {target!r}"}, status_code=412)
 
-            print(" ")
-            print(
-                f'{player.name} builds {target}',
-                '\n'.join(state.render()),
-                sep='\n', end='\n\n',
-            )
+                print(" ")
+                print(
+                    f'{player.name} builds {target}',
+                    '\n'.join(state.render()),
+                    sep='\n', end='\n\n',
+                )
 
-            GAMES[current] = state
+                GAMES[current] = state
         except Exception as e:
             return JSONResponse({"error": f"{e}"}, status_code=412)
         
@@ -169,40 +157,34 @@ class Game(SimpleNamespace):
                 return JSONResponse({"error": f"Unable to find game {current!r}"}, status_code=412)
             state = GAMES[current] 
 
-            # XXX: Hack for now to retrieve the player by name. Maybe we should
-            # have better way to do this.
-            pl = [p for p in state.players if p.name == body["player"]]
-            if not pl:
-                return JSONResponse({"error": "Could not find {player!r}"}, status_code=412)
-            player = pl[0]
-            
-            try:
-                card = [*state.hands[player]][body["card"]]
-            except IndexError:
-                return JSONResponse({"error": f"Unable to find card {body['card']}"}, status_code=412)
-            except Exception as e:
-                return JSONResponse({"error": f"{e}"}, status_code=412)
+            with state.players_turn(body["player"]) as player:
+                try:
+                    card = [*state.hands[player]][body["card"]]
+                except IndexError:
+                    return JSONResponse({"error": f"Unable to find card {body['card']}"}, status_code=412)
+                except Exception as e:
+                    return JSONResponse({"error": f"{e}"}, status_code=412)
 
-            try:
-                target = [*state.table][body["target"]]
-            except IndexError:
-                return JSONResponse({"error": f"Unable to find card {body['target']}"}, status_code=412)
-            except Exception as e:
-                return JSONResponse({"error": f"{e}"}, status_code=412)
-            
-            try:
-                state = state.with_capture(player, card, target)
-            except ValueError:
-                return JSONResponse({"Rejected": f"Unable to capture {player!r} {card!r} {target!r}"}, status_code=412)
+                try:
+                    target = [*state.table][body["target"]]
+                except IndexError:
+                    return JSONResponse({"error": f"Unable to find card {body['target']}"}, status_code=412)
+                except Exception as e:
+                    return JSONResponse({"error": f"{e}"}, status_code=412)
+                
+                try:
+                    state = state.with_capture(player, card, target)
+                except ValueError:
+                    return JSONResponse({"Rejected": f"Unable to capture {player!r} {card!r} {target!r}"}, status_code=412)
 
-            print(" ")
-            print(
-                f'{player.name} captures {target}',
-                '\n'.join(state.render()),
-                sep='\n', end='\n\n',
-            )
+                print(" ")
+                print(
+                    f'{player.name} captures {target}',
+                    '\n'.join(state.render()),
+                    sep='\n', end='\n\n',
+                )
 
-            GAMES[current] = state
+                GAMES[current] = state
         except Exception as e:
             return JSONResponse({"error": f"{e}"}, status_code=412)
         
