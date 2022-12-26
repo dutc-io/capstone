@@ -24,7 +24,7 @@ export default function Card({ suit, rank }) {
     Ace: "A",
   };
 
-  const color = (suit === "Diamond" || suit === "Heard") ? "text-red-600" : "text-black-600"
+  const color = (suit === "Diamond" || suit === "Heart") ? "text-red-600" : "text-black-600"
 
   return (
     <div className="bg-white mx-2 grid grid-cols-1 border border-grey-800 w-20 h-28">
