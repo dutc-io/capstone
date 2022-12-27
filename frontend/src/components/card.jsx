@@ -27,7 +27,7 @@ export default function Card({ suit, rank }) {
   const color = (suit === "Diamond" || suit === "Heart") ? "text-red-600" : "text-black-600"
 
   return (
-    <div className="bg-white mx-2 grid grid-cols-1 border border-grey-800 w-20 h-28">
+    <div className="bg-white mx-2 grid grid-cols-1 border border-grey-800 rounded w-20 h-28">
       <div className={`self-start text-left pl-2 pt-2 text-xl ${color}`}>{ranks[rank]}{suits[suit]}</div>
       <div className={`self-center text-center text-3xl ${color}`}>{suits[suit]}</div>
       <div className={`self-end text-right pr-2 pb-2 text-xl ${color}`}>{ranks[rank]}{suits[suit]}</div>
