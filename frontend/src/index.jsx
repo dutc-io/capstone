@@ -1,47 +1,45 @@
-import { createRoot } from 'react-dom/client'
-import { get } from 'superagent'
-import { useState, useEffect } from 'react'
+import React from "react";
+import { createRoot } from "react-dom/client";
 
-const API = '127.0.0.1:8000'
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-const Counter = () => {
-    const [ ready, setReady ] = useState(false)
-    const [ count, setCount ] = useState({local: null, remote: null})
-    useEffect(() => {
-        const ws = new WebSocket(`ws://${API}/wstest/counter`)
-        ws.onopen = event => {
-            setReady(true)
-        }
-        ws.onmessage = event => {
-            const { data: rawData } = event
-            const { count } = JSON.parse(rawData)
-            console.log({ count })
-            // setCount(({ local }) => ({local: local + 1, remote: count}))
-        }
-    }, [])
+import ErrorPage from "./pages/errorPage";
+import IndexPage from "./pages/indexPage";
+import GameIndexPage from "./pages/game/gameIndexPage";
+import AboutPage from "./pages/aboutPage";
+import GamePlayPage from "./pages/game/gamePlayPage";
+import RulePage from "./pages/rulePage";
 
-    if (!ready) return <em>Still loading...</em>
-    return <>Count: <b>{ count.local }</b> v <b>{ count.remote }</b> (diff: {count.remote - count.local})</>
-}
+import "./index.css";
 
-const Layout = () => <>
-    <h1>Cassino</h1>
-    <Counter />
-    <p>Instructions for play.</p>
-    Players:
-    <br />
-    Deck:
-    <br />
-    Table:
-    <br />
-    Hand:
-</>
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <IndexPage />,
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        index: true,
+        element: <GameIndexPage />,
+      },
+      {
+        path: "/game",
+        element: <GamePlayPage />,
+      },
+      {
+        path: "/about",
+        element: <AboutPage />,
+      },
+      {
+        path: "/rules",
+        element: <RulePage />,
+      },
+    ],
+  },
+]);
 
-const App = () => <>
-    <Layout />
-</>
-
-createRoot(
-    document.getElementById('root')
-).render(<App />)
-
+createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <RouterProvider router={router} />
+  </React.StrictMode>
+);
