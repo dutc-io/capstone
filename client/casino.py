@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-player",
         default=None,
-        help="Player the action is preformed with",
+        help="Name of the Player whos trying to preform the action",
     )
     parser.add_argument(
         "-players",
