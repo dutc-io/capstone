@@ -62,7 +62,6 @@ export default function Card({ index, foreman, suit, rank, accept, type }) {
 
   return (
     <div ref={drop} className={`mx-1 px-1 py-3 ${backgroundColor}`}>
-      <p>Index: {index}</p>
       <div
         ref={dragRef}
         style={{ opacity }}
