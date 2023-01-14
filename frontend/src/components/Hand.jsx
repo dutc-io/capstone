@@ -1,19 +1,17 @@
-import Card from "../components/card";
+import CardContainer from "../components/CardContainer";
 
-export default function Hand({ cards, foreman, type, accept }) {
+export default function Hand({ cards, dragHandler, type, accept }) {
   return (
     <div className="flex flex-row justify-center">
       {cards.map((c, idx) => {
-        // console.log(type, " ", `${c.suit}${c.rank}`, " at ", idx);
         return (
-          <Card
-            foreman={foreman}
-            key={`${c.suit}${c.rank}`}
-            suit={c.suit}
-            rank={c.rank}
+          <CardContainer 
+            key={`hand-${idx}`}
+            cards={c} 
+            index={idx} 
+            dragHandler={dragHandler}
             type={type}
             accept={accept}
-            index={idx}
           />
         );
       })}

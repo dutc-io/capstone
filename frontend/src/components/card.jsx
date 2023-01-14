@@ -1,39 +1,5 @@
-import { useDrag, useDrop } from "react-dnd";
-export default function Card({ index, foreman, suit, rank, accept, type }) {
-  const actor = accept;
-  const cardInfo = { type: type, index: index, card: `${suit} ${rank}` };
+export default function Card({ suit, rank }) {
 
-  const [{ opacity }, dragRef] = useDrag(
-    () => ({
-      type: type,
-      item: cardInfo,
-      collect: (monitor) => ({
-        opacity: monitor.isDragging() ? 0.5 : 1,
-      }),
-    }),
-    [index, foreman, suit, rank, accept, type]
-  );
-  const [{ canDrop, isOver }, drop] = useDrop(
-    () => ({
-      accept: accept,
-      drop: (item) => {
-        foreman(item, actor, index);
-      },
-      collect: (monitor) => ({
-        isOver: monitor.isOver(),
-        canDrop: monitor.canDrop(),
-      }),
-    }),
-    [index, foreman, suit, rank, accept, type]
-  );
-
-  const isActive = canDrop && isOver;
-  let backgroundColor = "bg-blue-50";
-  if (isActive) {
-    backgroundColor = "bg-green-100";
-  } else if (canDrop) {
-    backgroundColor = "bg-green-50";
-  }
   const suits = {
     Diamond: "♦",
     Club: "♣",
@@ -61,13 +27,8 @@ export default function Card({ index, foreman, suit, rank, accept, type }) {
     suit === "Diamond" || suit === "Heart" ? "text-red-600" : "text-black-600";
 
   return (
-    <div ref={drop} className={`mx-1 px-1 py-3 ${backgroundColor}`}>
-      <p>Index: {index}</p>
       <div
-        ref={dragRef}
-        style={{ opacity }}
         className="bg-white mx-2 grid grid-cols-1 border border-grey-800 rounded w-20 h-28"
-        data-testid={`card`}
       >
         <div className={`self-start text-left pl-2 pt-2 text-xl ${color}`}>
           {ranks[rank]}
@@ -81,6 +42,5 @@ export default function Card({ index, foreman, suit, rank, accept, type }) {
           {suits[suit]}
         </div>
       </div>
-    </div>
   );
 }

@@ -7,6 +7,7 @@ import ErrorPage from "./pages/errorPage";
 import IndexPage from "./pages/indexPage";
 import GameIndexPage from "./pages/game/gameIndexPage";
 import AboutPage from "./pages/aboutPage";
+// import GamePlayPage from "./pages/game/gamePlayPage";
 import GamePlayPage from "./pages/game/gamePlayPage";
 import RulePage from "./pages/rulePage";
 
