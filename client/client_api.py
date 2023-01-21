@@ -64,6 +64,11 @@ class Casino:
         """Create a new game"""
         return await self.post("create/", params)
 
+    @Endpoints.register("save")
+    async def save(self, *, params: dict):
+        """"""
+        return await self.post("save/", params)
+
     @Endpoints.register("state")
     async def state(self):
         """"""

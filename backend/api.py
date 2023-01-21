@@ -1,4 +1,4 @@
-from json import loads
+from json import loads, dumps
 from uuid import uuid4
 from types import SimpleNamespace
 from asyncio import sleep
@@ -11,6 +11,7 @@ from starlette.websockets import WebSocket
 from starlette.applications import Starlette
 
 from engine import Player, game
+import database
 
 # Testing temporary storage
 GAMES = {}
@@ -190,6 +191,45 @@ class Game(SimpleNamespace):
         
         return JSONResponse({"message": "capture accepted"}, status_code=200)
 
+    async def save(request):
+
+        try:
+            body = loads(await request.json())
+
+            current = body["game"]
+            if current not in GAMES:
+                return JSONResponse({"error": f"Unable to find game {current!r}"}, status_code=412)
+
+            state = GAMES[current] 
+            plist = [ p.name for p in state.player_order ] 
+            table = [ [ c.symbol[7:11].strip() for c in u.cards ] for u in state.table ]
+            hands = { pl.name: [
+                        c.symbol[7:11].strip() for c in {*h}
+                        ]
+                     for pl, h in state.hands.items()
+                     }
+            deck = [ c.symbol[7:11].strip() for c in state.deck ]
+            points = { p.name: p.points for p in state.players }
+
+            mock_encoded = { 
+                'gameid': current, 
+                'round': 0,
+                'players': plist,
+                'completed': False,
+                'state': {
+                    'player_order': plist,
+                    'table': table,
+                    'deck': deck,
+                    'hands': hands,
+                    'points': points, 
+                    }, 
+                }
+            database.update(current, mock_encoded)
+        except Exception as e:
+            return JSONResponse({"error": f"{e}"}, status_code=412)
+        #
+        return JSONResponse({"message": dumps(mock_encoded)}, status_code=200)
+
     async def state(request):
         # TODO: Need to write an StateEncoder?
         return JSONResponse({"message": "Not Implemented"}, status_code=501)
@@ -204,6 +244,7 @@ v1_routes = [
     Route("/build/", Game.build, methods=["POST"]),
     Route("/capture/", Game.capture, methods=["POST"]),
     Route("/state/", Game.state),
+    Route("/save/", Game.save, methods=["POST"]),
     Route("/test/simple/", Test.simple),
     WebSocketRoute("/ws_state/", Game.ws_state),
 ]
@@ -218,4 +259,10 @@ routes = [
         ],
     ),
 ]
-app = Starlette(routes=routes, debug=True)
+
+app = Starlette(
+    debug=True,
+    routes=routes,
+    on_startup=[database.create_tables],
+    on_shutdown=[],
+)
