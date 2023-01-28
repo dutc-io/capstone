@@ -99,6 +99,13 @@ class Player:
     def from_name(cls, name):
         return cls(name=name)
 
+    @classmethod
+    def from_json(cls, obj):
+        return cls(name=obj["name"], points=obj["points"])
+
+    def to_json(self):
+        return self.__dict__
+
     def __hash__(self):
         return hash(self.name)
 
@@ -264,6 +271,11 @@ def game(players, seed=0, _deck=None):
 
 if __name__ == "__main__":
 
-    DECK = [c for c in STANDARD_DECK]
-    deck = [d for d in DECK if d.rank.value in [2, 3, 5]]
-    print(f" ".join([c.symbol for c in deck]))
+    player_to_create = "Hyacinth"
+    player = Player.from_name(player_to_create)
+
+    print(player.to_json())
+
+    # DECK = [c for c in STANDARD_DECK]
+    # deck = [d for d in DECK if d.rank.value in [2, 3, 5]]
+    # print(f" ".join([c.symbol for c in deck]))
