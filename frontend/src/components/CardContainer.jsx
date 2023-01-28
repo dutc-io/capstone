@@ -44,7 +44,6 @@ export default function CardContainer({
   if (cards instanceof Array) {
     return (
       <div ref={drop} className={`inline-block ${bgColor}`}>
-        {index}
         <div ref={dragRef} style={{ opacity }} data-testid={`card`}>
           {cards.map((c) => {
             return (
@@ -61,7 +60,6 @@ export default function CardContainer({
   } else {
     return (
       <div ref={drop} className={`inline-block ${bgColor}`}>
-        {index}
         <div ref={dragRef} style={{ opacity }} data-testid={`card`}>
           <Card
             key={`card-${index}-${cards.rank}-${cards.suit}`}
