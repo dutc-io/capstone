@@ -2,6 +2,8 @@ import { Outlet } from "react-router-dom";
 
 import Nav from "../components/nav";
 import Footer from "../components/footer";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
 export default function IndexPage() {
   return (
@@ -10,8 +12,9 @@ export default function IndexPage() {
       <div><Nav /></div>
 
       {/* Content */}
+      <DndProvider backend={HTML5Backend}>
       <Outlet />
-
+      </DndProvider>
       {/* Footer */}
       <div><Footer /></div>
     </main>
