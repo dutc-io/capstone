@@ -1,4 +1,4 @@
-from json import loads
+from json import loads, dumps
 from uuid import uuid4
 from types import SimpleNamespace
 from asyncio import sleep
@@ -9,6 +9,7 @@ from starlette.endpoints import HTTPEndpoint
 from starlette.responses import JSONResponse
 from starlette.websockets import WebSocket
 from starlette.applications import Starlette
+from database import init_db, create_game
 
 from engine import Player, game
 
@@ -37,7 +38,6 @@ class WsTest(SimpleNamespace):
 
 
 class Game(SimpleNamespace):
-
     async def new_game(request):
 
         requested_players = None
@@ -55,139 +55,181 @@ class Game(SimpleNamespace):
             players = {Player.from_name(name) for name in requested_players}
         except Exception as e:
             return JSONResponse({"error": f"{e}"}, status_code=412)
-        
-        # XXX: This seems a bit verbose.
-        id = uuid4().hex
+
+        # Create a new one in the DB
         state = game(players)
-        GAMES[id] = state
+        gid = create_game(dumps([p.to_json() for p in players]), state.to_json())
+
+        # id = uuid4().hex
+        # GAMES[id] = state
+        # XXX: This seems a bit verbose.
+        # id = uuid4().hex
+        # state = game(players)
+        # GAMES[id] = state
 
         print(
-            '\n'.join(state.render()),
-            sep='\n', end='\n\n',
+            "\n".join(state.render()),
+            sep="\n",
+            end="\n\n",
         )
 
-        return JSONResponse({"game": id}, status_code=200)
+        return JSONResponse({"game": gid}, status_code=200)
 
     async def discard(request):
         try:
             body = loads(await request.json())
-            
+
             # Make sure a gamge exists
             current = body["game"]
             if current not in GAMES:
-                return JSONResponse({"error": f"Unable to find game {current!r}"}, status_code=412)
-            state = GAMES[current] 
-            
+                return JSONResponse(
+                    {"error": f"Unable to find game {current!r}"}, status_code=412
+                )
+            state = GAMES[current]
+
             with state.players_turn(body["player"]) as player:
                 try:
                     card = [*state.hands[player]][body["card"]]
                 except IndexError:
-                    return JSONResponse({"error": f"Unable to find card {body['card']}"}, status_code=412)
+                    return JSONResponse(
+                        {"error": f"Unable to find card {body['card']}"},
+                        status_code=412,
+                    )
                 except Exception as e:
                     return JSONResponse({"error": f"{e}"}, status_code=412)
 
                 try:
                     state = state.with_discard(player, card)
                 except ValueError:
-                    return JSONResponse({"Rejected": f"Unable to discard {player!r} {card!r}"}, status_code=412)
+                    return JSONResponse(
+                        {"Rejected": f"Unable to discard {player!r} {card!r}"},
+                        status_code=412,
+                    )
 
                 print(" ")
                 print(
-                    f'{player.name} discards {card.symbol}',
-                    '\n'.join(state.render()),
-                    sep='\n', end='\n\n',
+                    f"{player.name} discards {card.symbol}",
+                    "\n".join(state.render()),
+                    sep="\n",
+                    end="\n\n",
                 )
 
                 GAMES[current] = state
         except Exception as e:
             return JSONResponse({"error": f"{e}"}, status_code=412)
-        
+
         return JSONResponse({"message": "discard accepted"}, status_code=200)
 
     async def build(request):
         try:
             body = loads(await request.json())
-            
+
             # Make sure a gamge exists
             current = body["game"]
             if current not in GAMES:
-                return JSONResponse({"error": f"Unable to find game {current!r}"}, status_code=412)
-            state = GAMES[current] 
+                return JSONResponse(
+                    {"error": f"Unable to find game {current!r}"}, status_code=412
+                )
+            state = GAMES[current]
 
             with state.players_turn(body["player"]) as player:
                 try:
                     card = [*state.hands[player]][body["card"]]
                 except IndexError:
-                    return JSONResponse({"error": f"Unable to find card {body['card']}"}, status_code=412)
+                    return JSONResponse(
+                        {"error": f"Unable to find card {body['card']}"},
+                        status_code=412,
+                    )
                 except Exception as e:
                     return JSONResponse({"error": f"{e}"}, status_code=412)
 
                 try:
                     target = [*state.table][body["target"]]
                 except IndexError:
-                    return JSONResponse({"error": f"Unable to find card {body['target']}"}, status_code=412)
+                    return JSONResponse(
+                        {"error": f"Unable to find card {body['target']}"},
+                        status_code=412,
+                    )
                 except Exception as e:
                     return JSONResponse({"error": f"{e}"}, status_code=412)
-                
+
                 try:
                     state = state.with_build(player, card, target)
                 except ValueError:
-                    return JSONResponse({"Rejected": f"Unable to build {player!r} {card!r} {target!r}"}, status_code=412)
+                    return JSONResponse(
+                        {"Rejected": f"Unable to build {player!r} {card!r} {target!r}"},
+                        status_code=412,
+                    )
 
                 print(" ")
                 print(
-                    f'{player.name} builds {target}',
-                    '\n'.join(state.render()),
-                    sep='\n', end='\n\n',
+                    f"{player.name} builds {target}",
+                    "\n".join(state.render()),
+                    sep="\n",
+                    end="\n\n",
                 )
 
                 GAMES[current] = state
         except Exception as e:
             return JSONResponse({"error": f"{e}"}, status_code=412)
-        
+
         return JSONResponse({"message": "build accepted"}, status_code=200)
 
     async def capture(request):
         try:
             body = loads(await request.json())
-            
+
             # Make sure a gamge exists
             current = body["game"]
             if current not in GAMES:
-                return JSONResponse({"error": f"Unable to find game {current!r}"}, status_code=412)
-            state = GAMES[current] 
+                return JSONResponse(
+                    {"error": f"Unable to find game {current!r}"}, status_code=412
+                )
+            state = GAMES[current]
 
             with state.players_turn(body["player"]) as player:
                 try:
                     card = [*state.hands[player]][body["card"]]
                 except IndexError:
-                    return JSONResponse({"error": f"Unable to find card {body['card']}"}, status_code=412)
+                    return JSONResponse(
+                        {"error": f"Unable to find card {body['card']}"},
+                        status_code=412,
+                    )
                 except Exception as e:
                     return JSONResponse({"error": f"{e}"}, status_code=412)
 
                 try:
                     target = [*state.table][body["target"]]
                 except IndexError:
-                    return JSONResponse({"error": f"Unable to find card {body['target']}"}, status_code=412)
+                    return JSONResponse(
+                        {"error": f"Unable to find card {body['target']}"},
+                        status_code=412,
+                    )
                 except Exception as e:
                     return JSONResponse({"error": f"{e}"}, status_code=412)
-                
+
                 try:
                     state = state.with_capture(player, card, target)
                 except ValueError:
-                    return JSONResponse({"Rejected": f"Unable to capture {player!r} {card!r} {target!r}"}, status_code=412)
+                    return JSONResponse(
+                        {
+                            "Rejected": f"Unable to capture {player!r} {card!r} {target!r}"
+                        },
+                        status_code=412,
+                    )
 
                 print(" ")
                 print(
-                    f'{player.name} captures {target}',
-                    '\n'.join(state.render()),
-                    sep='\n', end='\n\n',
+                    f"{player.name} captures {target}",
+                    "\n".join(state.render()),
+                    sep="\n",
+                    end="\n\n",
                 )
 
                 GAMES[current] = state
         except Exception as e:
             return JSONResponse({"error": f"{e}"}, status_code=412)
-        
+
         return JSONResponse({"message": "capture accepted"}, status_code=200)
 
     async def state(request):
@@ -218,4 +260,9 @@ routes = [
         ],
     ),
 ]
-app = Starlette(routes=routes, debug=True)
+app = Starlette(
+    routes=routes,
+    debug=True,
+    on_startup=[init_db],
+    on_shutdown=[],  # Lets keep the db for now?
+)
