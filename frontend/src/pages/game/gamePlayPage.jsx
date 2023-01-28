@@ -44,57 +44,25 @@ export default function GamePlayPage() {
       // We're building on table's cards 
       if (moveToIdx !== "TRAIL"){
         setApiCall(`Building: player ${item.index}, on table  ${moveToIdx}`)
+        c = playerPopIndex(item.index)
+        if (table[moveToIdx] instanceof Array){
+          table[moveToIdx].push(c);
+        }else{
+          table[moveToIdx] = [table[moveToIdx], c];
+        }
+        setTable([...table])
         return
       } 
 
       // We're trailing 
-      // setApiCall(`Trialing: player , ${item.index}`)
+      setApiCall(`Trialing: player , ${item.index}`)
       c = playerPopIndex(item.index)
-      setTable(c)
+      setTable([...table, c])
     } else if (type === "TABLE") {
       setApiCall(`Capturing: player ${moveToIdx} on table ${item.index}`)
       playerPopIndex(moveToIdx)
       tablePopIndex(item.index)
     }
-    // switch (type) {
-    //   case "PLAYER":
-    //     // Player can either trail or build
-    //     if (moveToidx === "") {
-    //       setApiCall(`TRAIL: Player trails card index ${item.index}`);
-    //       let pc = playerPopIndex(item.index) //player.splice(item.index, 1)[0]
-    //       addTable(pc)
-    //       setPlayer([...player])
-    //       // console.log("Spliced player card: ", pc)
-    //       // table.splice(table.length, 0, pc)
-    //       // setPlayer([...player])
-    //       // setTable([...table])
-    //     } else {
-    //       setApiCall(
-    //         `BUILD: Player card index ${item.index} to Table index: ${moveToidx}`
-    //       );
-    //       let bpc = player.splice(item.index, 1)[0];
-    //       setPlayer([...player]);
-    //       // This feels wrong. But also works, so how wrong could it be?
-    //       if (table[moveToidx] instanceof Array) {
-    //         table[moveToidx].push(bpc);
-    //       } else {
-    //         table[moveToidx] = [table[moveToidx], bpc];
-    //       }
-    //       setTable([...table]);
-    //     }
-    //     break;
-    //   case "TABLE":
-    //     setApiCall(
-    //       `CAPTURE: Table card index ${item.index} captured by Player card index: ${moveToidx}`
-    //     );
-    //     let tc = table.splice(item.index, 1)[0];
-    //     let tpc = player.splice(moveToidx, 1)[0];
-    //     setTable([...table]);
-    //     setPlayer([...player]);
-    //     break;
-    //   default:
-    //     break;
-    // }
   };
 
   const [{ canDrop, isOver }, drop] = useDrop(
@@ -113,7 +81,7 @@ export default function GamePlayPage() {
         canDrop: monitor.canDrop(),
       }),
     }),
-    []
+    [table, player]
   );
 
   if (player === null || table === null) {
@@ -127,13 +95,7 @@ export default function GamePlayPage() {
   } else if (canDrop) {
     bgColor = "bg-blue-50";
   }
-  // console.log(" ") 
-  // console.log("Player") 
-  // console.log(player)
-  // console.log(" ") 
-  // console.log("Table ") 
-  // console.log(table)
-  // console.log(" ") 
+
   return (
     <div className="grow justify-center">
       <div className="h-full">
@@ -143,10 +105,6 @@ export default function GamePlayPage() {
         >
           <div className="text-center row-span-1 self-start align-middle">
             <strong>API CALL</strong> {apiCall}
-            <p>Table length: {table.length}</p>
-            <p>{table.map((c) => <><i>{c.rank}</i> {c.suit}, </>)}</p>
-            <p>Plyer length: {player.length}</p>
-            <p>{player.map((c) => <><i>{c.rank}</i> {c.suit}, </>)}</p>
           </div>
           <div className="text-center row-span-1 self-center align-middle">
             <Hand
