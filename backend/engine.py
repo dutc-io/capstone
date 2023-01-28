@@ -146,12 +146,18 @@ class Unit:
 
     @classmethod
     def from_json(cls, obj):
-        return cls(**loads(obj))
+        _raw = loads(obj)
+        print("JSON:")
+        print(_raw)
+        return cls(
+            cards=frozenset([Card.from_json(dumps(c)) for c in _raw["cards"]]),
+            value=_raw["value"]
+        )
 
     def to_json(self):
         return dumps(
             {
-                "cards": [{"rank": r, "suit": s} for r, s in nwise(self.cards)],
+                "cards": [{"rank": r.value, "suit": s.value} for r, s in nwise(self.cards)],
                 "value": self.value,
             }
         )
@@ -330,27 +336,27 @@ def game(players, seed=0, _deck=None):
 
 if __name__ == "__main__":
 
-    DECK = [c for c in STANDARD_DECK]
-    deck = [d for d in DECK if d.rank.value in [2, 3, 5]]
-    print(f" ".join([c.symbol for c in deck]))
-    player_to_create = "Hyacinth"
-    player = Player.from_name(player_to_create)
+    # DECK = [c for c in STANDARD_DECK]
+    # deck = [d for d in DECK if d.rank.value in [2, 3, 5]]
+    # print(f" ".join([c.symbol for c in deck]))
+    # player_to_create = "Hyacinth"
+    # player = Player.from_name(player_to_create)
     #
-    state = State.from_players(deck, *[player])
+    # state = State.from_players(deck, *[player])
     # state = state.with_deal()
     # sjson = state.to_json()
     # with open("woop.json", "wt") as fp:
     #     import json
     #     json.dump(sjson, fp)
 
-    # queen_of_heards = Card(rank="Queen", suit="Heart")
-    # unit = Unit(cards=frozenset(queen_of_heards), value=1)
-    # serialized = {"cards": frozenset({'Queen', 'Heart'}), "value": 1}
-    # a = {
-    #     "cards": [{"rank": r, "suit": s} for r, s in nwise(unit.cards)],
-    #     "value": unit.value,
-    # }
-    # print(a)
+    queen_of_heards = Card(rank=Rank.Queen, suit=Suit.Heart)
+    print(queen_of_heards.to_json())
+    unit = Unit(cards=frozenset(queen_of_heards), value=1)
+    uj = unit.to_json()
+    print(uj)
+    _unit = Unit.from_json(uj)
+    print(_unit)
+    # print(unit.to_json())
 
     # a = Unit.from_json(serialized)
 
