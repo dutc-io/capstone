@@ -52,3 +52,15 @@ def create_game(players, state) -> int | None:
     db.commit()
 
     return gid
+
+def get_game_state(gid):
+    """Return most current state of a game"""
+    
+    # Create a Game
+    c.execute(
+        """ SELECT state FROM state WHERE game_id=? ORDER BY modified DESC """,
+        (gid,),
+    )
+    # Error handling
+    _state = c.fetchone()
+    return _state["state"] 

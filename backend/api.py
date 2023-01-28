@@ -1,4 +1,4 @@
-from json import loads, dumps
+from json import dumps, loads
 from uuid import uuid4
 from types import SimpleNamespace
 from asyncio import sleep
@@ -9,9 +9,9 @@ from starlette.endpoints import HTTPEndpoint
 from starlette.responses import JSONResponse
 from starlette.websockets import WebSocket
 from starlette.applications import Starlette
-from database import init_db, create_game
 
-from engine import Player, game
+from engine import game, Player, State
+from database import create_game, get_game_state, init_db
 
 # Testing temporary storage
 GAMES = {}
@@ -233,8 +233,16 @@ class Game(SimpleNamespace):
         return JSONResponse({"message": "capture accepted"}, status_code=200)
 
     async def state(request):
-        # TODO: Need to write an StateEncoder?
-        return JSONResponse({"message": "Not Implemented"}, status_code=501)
+        body = loads(await request.json())
+        gid = body["game"]
+        current_state = get_game_state(int(gid))
+        print(current_state)
+        state = State.from_json(current_state)
+        print(state)
+        # except Exception as e:
+        #     print(f"{e}")
+
+        return JSONResponse({"state": "woop"}, status_code=200)
 
     async def ws_state(socket):
         return JSONResponse({"message": "Not Implemented"}, status_code=501)
@@ -245,7 +253,7 @@ v1_routes = [
     Route("/discard/", Game.discard, methods=["POST"]),
     Route("/build/", Game.build, methods=["POST"]),
     Route("/capture/", Game.capture, methods=["POST"]),
-    Route("/state/", Game.state),
+    Route("/state/", Game.state, methods=["POST"]),
     Route("/test/simple/", Test.simple),
     WebSocketRoute("/ws_state/", Game.ws_state),
 ]

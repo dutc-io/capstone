@@ -146,7 +146,11 @@ class Unit:
 
     @classmethod
     def from_json(cls, obj):
-        return cls(**loads(obj))
+        _raw = loads(obj)
+        return cls(
+            cards=frozenset([Card.from_json(c) for c in _raw["cards"]]),
+            value=_raw["value"]
+        )
 
     def to_json(self):
         return dumps(
