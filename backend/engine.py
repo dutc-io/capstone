@@ -170,31 +170,39 @@ class State:
     player_order: deque[Player]
 
     def to_json(self):
-        return dumps({
-            "deck": [c.to_json() for c in self.deck], 
-            "table": [u.to_json() for u in self.table], 
-            "players": [p.to_json() for p in self.players], 
-            "hands": {
-                player.to_json(): [c.to_json() for c in cards]
-                for (player, cards) in self.hands.items()
-            },   
-            "capture": {
-                player.to_json(): [c.to_json() for c in cards]
-                for (player, cards) in self.capture.items()
-            },
-            "player_order":[p.to_json() for p in self.player_order]
-        })
+        return dumps(
+            {
+                "deck": [c.to_json() for c in self.deck],
+                "table": [u.to_json() for u in self.table],
+                "players": [p.to_json() for p in self.players],
+                "hands": {
+                    player.to_json(): [c.to_json() for c in cards]
+                    for (player, cards) in self.hands.items()
+                },
+                "capture": {
+                    player.to_json(): [c.to_json() for c in cards]
+                    for (player, cards) in self.capture.items()
+                },
+                "player_order": [p.to_json() for p in self.player_order],
+            }
+        )
 
     @classmethod
     def from_json(cls, obj):
         _raw = loads(obj)
         return cls(
-            deck = deque([Card.from_json(c) for c in _raw["deck"]]), 
-            table = frozenset([Unit.from_json(u) for u in _raw["table"]]), 
-            players = frozenset([Player.from_json(p) for p in _raw["players"]]), 
-            hands = {Player.from_json(p): frozenset([Card.from_json(c) for c in cs]) for p, cs in _raw["hands"].items()},   
-            capture = {Player.from_json(p): frozenset([Card.from_json(c) for c in cs]) for p, cs in _raw["capture"].items()},
-            player_order = deque([Player.from_json(p) for p in _raw["player_order"]]) 
+            deck=deque([Card.from_json(c) for c in _raw["deck"]]),
+            table=frozenset([Unit.from_json(u) for u in _raw["table"]]),
+            players=frozenset([Player.from_json(p) for p in _raw["players"]]),
+            hands={
+                Player.from_json(p): frozenset([Card.from_json(c) for c in cs])
+                for p, cs in _raw["hands"].items()
+            },
+            capture={
+                Player.from_json(p): frozenset([Card.from_json(c) for c in cs])
+                for p, cs in _raw["capture"].items()
+            },
+            player_order=deque([Player.from_json(p) for p in _raw["player_order"]]),
         )
 
     @contextmanager
@@ -334,7 +342,6 @@ if __name__ == "__main__":
     # with open("woop.json", "wt") as fp:
     #     import json
     #     json.dump(sjson, fp)
-
 
     # queen_of_heards = Card(rank="Queen", suit="Heart")
     # unit = Unit(cards=frozenset(queen_of_heards), value=1)
