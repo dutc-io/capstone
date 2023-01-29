@@ -56,11 +56,11 @@ def create_game(players, state) -> int | None:
 def get_game_state(gid):
     """Return most current state of a game"""
     
-    # Create a Game
+    # Return the current state of a game 
     c.execute(
         """ SELECT state FROM state WHERE game_id=? ORDER BY modified DESC """,
         (gid,),
     )
-    # Error handling
+    # TODO: Error handling
     _state = c.fetchone()
     return _state["state"] 
