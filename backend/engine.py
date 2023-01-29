@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 from enum import Enum
+from json import dumps, loads
 from random import Random
 from typing import Union
 from operator import or_
 from functools import cached_property, reduce
-from itertools import product
+from itertools import islice, product, tee
 from contextlib import contextmanager
 from collections import deque, namedtuple
 from dataclasses import dataclass, replace
+
+nwise = lambda g, *, n=2: zip(*(islice(g, i, None) for i, g in enumerate(tee(g, n))))
 
 
 class NotTurnException(Exception):
@@ -70,6 +73,14 @@ class Card(namedtuple("Card", "rank suit")):
         Rank.Ten: 10,
     }
 
+    @classmethod
+    def from_json(cls, obj):
+        _raw = loads(obj)
+        return cls(rank=Rank(_raw["rank"]), suit=Suit(_raw["suit"]))
+
+    def to_json(self):
+        return dumps({"rank": self.rank.value, "suit": self.suit.value})
+
     @cached_property
     def value(self):
         return self.VALUES.get(self.rank)
@@ -99,6 +110,13 @@ class Player:
     def from_name(cls, name):
         return cls(name=name)
 
+    @classmethod
+    def from_json(cls, obj):
+        return cls(**loads(obj))
+
+    def to_json(self):
+        return dumps(self.__dict__)
+
     def __hash__(self):
         return hash(self.name)
 
@@ -126,6 +144,24 @@ class Unit:
             cards=frozenset({*self.cards, *other.cards}), value=self.value + other.value
         )
 
+    @classmethod
+    def from_json(cls, obj):
+        _raw = loads(obj)
+        print("JSON:")
+        print(_raw)
+        return cls(
+            cards=frozenset([Card.from_json(dumps(c)) for c in _raw["cards"]]),
+            value=_raw["value"]
+        )
+
+    def to_json(self):
+        return dumps(
+            {
+                "cards": [{"rank": r.value, "suit": s.value} for r, s in nwise(self.cards)],
+                "value": self.value,
+            }
+        )
+
     def __hash__(self):
         return hash(self.cards)
 
@@ -138,6 +174,42 @@ class State:
     hands: dict[Player, frozenset[Card]]
     capture: dict[Player, frozenset[Card]]
     player_order: deque[Player]
+
+    def to_json(self):
+        return dumps(
+            {
+                "deck": [c.to_json() for c in self.deck],
+                "table": [u.to_json() for u in self.table],
+                "players": [p.to_json() for p in self.players],
+                "hands": {
+                    player.to_json(): [c.to_json() for c in cards]
+                    for (player, cards) in self.hands.items()
+                },
+                "capture": {
+                    player.to_json(): [c.to_json() for c in cards]
+                    for (player, cards) in self.capture.items()
+                },
+                "player_order": [p.to_json() for p in self.player_order],
+            }
+        )
+
+    @classmethod
+    def from_json(cls, obj):
+        _raw = loads(obj)
+        return cls(
+            deck=deque([Card.from_json(c) for c in _raw["deck"]]),
+            table=frozenset([Unit.from_json(u) for u in _raw["table"]]),
+            players=frozenset([Player.from_json(p) for p in _raw["players"]]),
+            hands={
+                Player.from_json(p): frozenset([Card.from_json(c) for c in cs])
+                for p, cs in _raw["hands"].items()
+            },
+            capture={
+                Player.from_json(p): frozenset([Card.from_json(c) for c in cs])
+                for p, cs in _raw["capture"].items()
+            },
+            player_order=deque([Player.from_json(p) for p in _raw["player_order"]]),
+        )
 
     @contextmanager
     def players_turn(self, player_name):
@@ -264,6 +336,39 @@ def game(players, seed=0, _deck=None):
 
 if __name__ == "__main__":
 
-    DECK = [c for c in STANDARD_DECK]
-    deck = [d for d in DECK if d.rank.value in [2, 3, 5]]
-    print(f" ".join([c.symbol for c in deck]))
+    # DECK = [c for c in STANDARD_DECK]
+    # deck = [d for d in DECK if d.rank.value in [2, 3, 5]]
+    # print(f" ".join([c.symbol for c in deck]))
+    # player_to_create = "Hyacinth"
+    # player = Player.from_name(player_to_create)
+    #
+    # state = State.from_players(deck, *[player])
+    # state = state.with_deal()
+    # sjson = state.to_json()
+    # with open("woop.json", "wt") as fp:
+    #     import json
+    #     json.dump(sjson, fp)
+
+    queen_of_heards = Card(rank=Rank.Queen, suit=Suit.Heart)
+    print(queen_of_heards.to_json())
+    unit = Unit(cards=frozenset(queen_of_heards), value=1)
+    uj = unit.to_json()
+    print(uj)
+    _unit = Unit.from_json(uj)
+    print(_unit)
+    # print(unit.to_json())
+
+    # a = Unit.from_json(serialized)
+
+    # print(dir(queen_of_heards))
+    # serialized = queen_of_heards.to_json()
+    # print(serialized)
+
+    # player_to_create = "Hyacinth"
+    # player = Player.from_name(player_to_create)
+    #
+    # print(player.to_json())
+
+    # DECK = [c for c in STANDARD_DECK]
+    # deck = [d for d in DECK if d.rank.value in [2, 3, 5]]
+    # print(f" ".join([c.symbol for c in deck]))
