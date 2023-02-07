@@ -65,9 +65,9 @@ class Casino:
         return await self.post("create/", params)
 
     @Endpoints.register("state")
-    async def state(self):
-        """"""
-        return await self.get("state/")
+    async def state(self, *, params: dict):
+        """Get the current State of a game"""
+        return await self.post("state/", params)
 
     @Endpoints.register("test")
     async def test(self):
