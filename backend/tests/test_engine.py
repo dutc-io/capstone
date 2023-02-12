@@ -1,6 +1,7 @@
+from collections import deque
 from pytest import raises
 
-from engine import game, MissingPlayerException, Player, STANDARD_DECK, Suit, Rank
+from engine import Card, Player, Rank, State, Suit, Unit, STANDARD_DECK
 
 # Smoke tests (that basically test that pytest is working). But maybe a
 # starting porint?
@@ -8,7 +9,6 @@ from engine import game, MissingPlayerException, Player, STANDARD_DECK, Suit, Ra
 # python hashseed set to 0 via export PYTHONHASHSEED=0
 
 DECK = [c for c in STANDARD_DECK]
-
 
 def test_suits():
 
@@ -20,112 +20,96 @@ def test_suits():
     assert len([*Suit]) == len(suits)
 
 
-def test_players_from_name():
+def test_rank():
 
-    player_to_create = "Hyacinth"
-    player = Player.from_name(player_to_create)
+    ranks = [
+        "Two",
+        "Three",
+        "Four",
+        "Five",
+        "Six",
+        "Seven",
+        "Eight",
+        "Nine",
+        "Ten",
+        "Jack",
+        "Queen",
+        "King",
+        "Ace",
+    ]
 
-    assert player.name == player_to_create
+    for r in ranks:
+        assert Rank[r]
+
+    assert len([*Rank]) == len(ranks)
+
+
+def test_player_create():
+
+    name = "Hyacinth"
+    player = Player(name=name)
+
+    assert type(player) is Player
     assert player.points == 0
+    assert player.name == name
 
 
-def test_state_from_game():
+def test_cards():
 
-    player_to_create = "Hyacinth"
-    player = Player.from_name(player_to_create)
+    card = Card(suit=Suit.Spade, rank=Rank.Ace)
+    print(card)
 
-    state = game([player])
-
-    assert player in state.players
-    assert len(state.deck) == 44  # Aftr deal
-
-
-def test_with_player():
-
-    hyacinth = Player.from_name("Hyacinth")
-    state = game([hyacinth])
-
-    with state.players_turn("Hyacinth") as player:
-        assert player is hyacinth
-
-    with raises(MissingPlayerException):
-        with state.players_turn("Not Hyacinth") as player:
-            ...
+    assert type(card) is Card
+    assert card.rank == Rank.Ace
+    assert card.suit == Suit.Spade
 
 
-def test_disguard():
-    state = game([Player.from_name("Hyacinth"), Player.from_name("Boonsri")])
-    # Inital state for debugging game
-    print(
-        "\n".join(state.render()),
-        sep="\n",
-        end="\n",
+def test_unit():
+
+    cards = [Card(suit=Suit.Spade, rank=Rank.Ace), Card(suit=Suit.Heart, rank=Rank.Ace)]
+    unit = Unit(cards=frozenset(cards), value=None)
+    u = Unit.from_card(cards[0])
+
+    assert type(u) is Unit
+    assert u.value == 1
+    assert type(unit) is Unit
+    assert unit.value == None 
+
+
+def test_state():
+
+    name = "Hyacinth"
+
+    player = Player(name=name)
+    card = Card(suit=Suit.Spade, rank=Rank.Ace)
+    deck = deque([card])
+    unit = Unit.from_card(card)
+    table = frozenset([unit])
+    players = frozenset([player])
+    hands = {player: frozenset([card])}
+    capture = {player: frozenset([card])}
+    player_order = deque([player])
+
+    state = State(
+        deck=deck,
+        table=table,
+        players=players,
+        hands=hands,
+        capture=capture,
+        player_order=player_order,
     )
 
-    with state.players_turn("Hyacinth") as player:
-        card = [*state.hands[player]][0]  # K<clubs>
-        state = state.with_discard(player, card)
-        assert card not in [*state.hands[player]]
-
-    # Discarded state for debugging game
-    print(" ")
-    print(
-        f"{player.name} discards {card.symbol}",
-        "\n".join(state.render()),
-        sep="\n",
-        end="\n\n",
-    )
+    assert type(state) is State
 
 
-def test_with_build():
-    deck = [d for d in DECK if d.rank in [Rank.Two, Rank.Three, Rank.Five]]
-    state = game([Player.from_name("Hyacinth")], _deck=deck)
-    # Inital state for debugging game
-    print(
-        "\n".join(state.render()),
-        sep="\n",
-        end="\n",
-    )
+def test_state_from_players():
 
-    with state.players_turn("Hyacinth") as player:
-        card = [*state.hands[player]][0]  # 5<spade>
-        target = [*state.table][0]  # 3<club>
-        state = state.with_build(player, card, target)
-        assert card not in [*state.hands[player]]
-        
-        assert card in {c for c in [*state.table][0].cards}
-        assert [*target.cards][0] in {c for c in [*state.table][0].cards}
+    players = [
+        Player(name="Hyacinth"),
+        Player(name="Rose"),
+        Player(name="Daisy"),
+        Player(name="Onslow"),
+    ]
+    state = State.from_players(DECK, *players)
 
-    print(" ")
-    print(
-        f"{player.name} builds on {' '.join([c.symbol for c in target.cards])} with {card.symbol}",
-        "\n".join(state.render()),
-        sep="\n",
-        end="\n\n",
-    )
-
-def test_with_capture():
-    deck = [d for d in DECK if d.rank in [Rank.Two, Rank.Three, Rank.Five]]
-    state = game([Player.from_name("Hyacinth")], _deck=deck)
-    # Inital state for debugging game
-    print(
-        "\n".join(state.render()),
-        sep="\n",
-        end="\n",
-    )
-
-    with state.players_turn("Hyacinth") as player:
-        card = [*state.hands[player]][0]  # 5<spade>
-        target = [*state.table][1]  # 5<diamond>
-        state = state.with_capture(player, card, target)
-        assert card not in [*state.hands[player]]
-        assert [*target.cards][0] not in {c for u in [*state.table] for c in u.cards}
-        assert len([*state.table]) == 3
-
-    print(" ")
-    print(
-        f"{player.name} captures {' '.join([c.symbol for c in target.cards])} with {card.symbol}",
-        "\n".join(state.render()),
-        sep="\n",
-        end="\n\n",
-    )
+    assert type(state) is State

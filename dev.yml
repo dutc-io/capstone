@@ -5,6 +5,7 @@ services:
       dockerfile: docker/frontend.dockerfile
     environment:
       PYTHONHASHSEED: 0
+      VITE_DEVELOPMENT: DEV
     volumes:
         - ./frontend:/app
 
