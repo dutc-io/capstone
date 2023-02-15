@@ -1,4 +1,5 @@
 from collections import deque
+from typing import List
 from pytest import raises
 
 from engine import Card, Player, Rank, State, Suit, Unit, STANDARD_DECK
@@ -9,6 +10,7 @@ from engine import Card, Player, Rank, State, Suit, Unit, STANDARD_DECK
 # python hashseed set to 0 via export PYTHONHASHSEED=0
 
 DECK = [c for c in STANDARD_DECK]
+
 
 def test_suits():
 
@@ -57,38 +59,36 @@ def test_player_create():
 def test_cards():
 
     card = Card(suit=Suit.Spade, rank=Rank.Ace)
-    print(card)
 
     assert type(card) is Card
-    assert card.rank == Rank.Ace
-    assert card.suit == Suit.Spade
+    assert card.rank == "Ace"
+    assert card.suit == "Spade"
 
 
 def test_unit():
 
     cards = [Card(suit=Suit.Spade, rank=Rank.Ace), Card(suit=Suit.Heart, rank=Rank.Ace)]
-    unit = Unit(cards=frozenset(cards), value=None)
+    unit = Unit(cards=cards, value=None)
     u = Unit.from_card(cards[0])
 
     assert type(u) is Unit
     assert u.value == 1
     assert type(unit) is Unit
-    assert unit.value == None 
+    assert type(unit.cards) is list
+    assert unit.value == None
 
 
 def test_state():
 
-    name = "Hyacinth"
-
-    player = Player(name=name)
+    player = Player(name="Hyacinth")
     card = Card(suit=Suit.Spade, rank=Rank.Ace)
-    deck = deque([card])
+    deck = [card]
     unit = Unit.from_card(card)
-    table = frozenset([unit])
-    players = frozenset([player])
-    hands = {player: frozenset([card])}
-    capture = {player: frozenset([card])}
-    player_order = deque([player])
+    table = [unit]
+    players = [player]
+    hands = {player.name: [card]}
+    capture = {player.name: [card]}
+    player_order = [player]
 
     state = State(
         deck=deck,
@@ -110,6 +110,17 @@ def test_state_from_players():
         Player(name="Daisy"),
         Player(name="Onslow"),
     ]
-    state = State.from_players(DECK, *players)
+    state = State.from_players(DECK, players)
 
     assert type(state) is State
+
+def test_state_from_players_named_the_same():
+    
+    # XXX: Currently this failes, and is one of the downfalls of using a `str`
+    # key name and not the actual player class.
+    players = [
+        Player(name="Hyacinth"),
+        Player(name="Hyacinth"),
+    ]
+    state = State.from_players(DECK, players)
+    assert len(state.hands.keys()) == 2
