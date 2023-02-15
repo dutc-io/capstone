@@ -1,8 +1,10 @@
 import { useDrop } from "react-dnd";
 import { useState } from "react";
 
+import { useQuery } from "react-query";
 import Hand from "../../components/Hand";
-import CardContainer from "../../components/CardContainer";
+import { FetchState } from "../../requests/stateRequests"
+
 
 const fakeAPIResponse = {
   table: [
@@ -23,45 +25,49 @@ export default function GamePlayPage() {
   const [apiCall, setApiCall] = useState("");
   const [table, setTable] = useState(fakeAPIResponse.table);
   const [player, setPlayer] = useState(fakeAPIResponse.player);
+  // const { isLoading, error, data } = useQuery({
+  //   queryKey: ["gameState"], // We prob don't want to cache this
+  //   queryFn: () => FetchState(1) // Need game ID
+  // });
 
   const addPlayer = (c) => setPlayer([...player, c]);
   const playerPopIndex = (i) => {
-    const c = player.splice(i, 1)[0]
-    setPlayer([...player])
-    return c
-  }
+    const c = player.splice(i, 1)[0];
+    setPlayer([...player]);
+    return c;
+  };
   const addTable = (c) => setTable([...table, c]);
   const tablePopIndex = (i) => {
-    const c = table.splice(i, 1)[0]
-    setTable([...table])
-    return c
-  }
+    const c = table.splice(i, 1)[0];
+    setTable([...table]);
+    return c;
+  };
 
   const handleDrag = (item, type, moveToIdx) => {
     console.log("Item: ", item, " Type: ", type, " Move to: ", moveToIdx);
     let c;
     if (type === "PLAYER") {
-      // We're building on table's cards 
-      if (moveToIdx !== "TRAIL"){
-        setApiCall(`Building: player ${item.index}, on table  ${moveToIdx}`)
-        c = playerPopIndex(item.index)
-        if (table[moveToIdx] instanceof Array){
+      // We're building on table's cards
+      if (moveToIdx !== "TRAIL") {
+        setApiCall(`Building: player ${item.index}, on table  ${moveToIdx}`);
+        c = playerPopIndex(item.index);
+        if (table[moveToIdx] instanceof Array) {
           table[moveToIdx].push(c);
-        }else{
+        } else {
           table[moveToIdx] = [table[moveToIdx], c];
         }
-        setTable([...table])
-        return
-      } 
+        setTable([...table]);
+        return;
+      }
 
-      // We're trailing 
-      setApiCall(`Trialing: player , ${item.index}`)
-      c = playerPopIndex(item.index)
-      setTable([...table, c])
+      // We're trailing
+      setApiCall(`Trialing: player , ${item.index}`);
+      c = playerPopIndex(item.index);
+      setTable([...table, c]);
     } else if (type === "TABLE") {
-      setApiCall(`Capturing: player ${moveToIdx} on table ${item.index}`)
-      playerPopIndex(moveToIdx)
-      tablePopIndex(item.index)
+      setApiCall(`Capturing: player ${moveToIdx} on table ${item.index}`);
+      playerPopIndex(moveToIdx);
+      tablePopIndex(item.index);
     }
   };
 
@@ -69,10 +75,10 @@ export default function GamePlayPage() {
     () => ({
       accept: "PLAYER",
       drop: (item, monitor) => {
-        const didDrop = monitor.didDrop()
+        const didDrop = monitor.didDrop();
         if (didDrop) {
         } else {
-          console.log("Trailing: ", item)
+          console.log("Trailing: ", item);
           handleDrag(item, "PLAYER", "TRAIL");
         }
       },
@@ -83,6 +89,16 @@ export default function GamePlayPage() {
     }),
     [table, player]
   );
+
+  // if (isLoading) return (<p>Loading...</p>)
+  // if (error) return (<p>An error has occurred: {error.message}</p>)
+
+  // For now just take the first player
+  // const state = JSON.parse(data.state)
+  // const firstPlayer = Object.values(state.hands)[0]
+  // // const hand = state.hands
+  // const hand = firstPlayer.map((c)=>JSON.parse(c))
+  // console.log(hand)
 
   if (player === null || table === null) {
     return <p>loading</p>;
