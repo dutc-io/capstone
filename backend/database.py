@@ -1,9 +1,22 @@
-from sqlite3 import PARSE_DECLTYPES, connect
+from typing import List
+from json import dumps, loads
+from sqlite3 import connect, PARSE_DECLTYPES
+
+from pydantic import BaseModel
+from engine import Player
 
 db = connect("casino.db", detect_types=PARSE_DECLTYPES, check_same_thread=False)
 db.row_factory = lambda c, r: {k: v for k, v in zip([cl[0] for cl in c.description], r)}
 c = db.cursor()
 
+class CreateNewGameRequest(BaseModel):
+    # Need to validate its not empty 
+    players: List[str] 
+
+class NewGameResponse(BaseModel):
+    players: List[str] 
+    game_id: int | None
+    error: str | None = None
 
 def init_db():
     """Initialize Database"""
@@ -33,25 +46,27 @@ def init_db():
     )
 
 
-def create_game(players, state) -> int | None:
+def create_game(players: List[Player]) -> int | None:
     """Save a new game"""
     
     # Create a Game
     c.execute(
         """ INSERT INTO game (players) VALUES (?) """,
-        (players,),
+        # There has to be a better way then `dumps`
+        (dumps({"players": [p.dict() for p in players]}),),
     )
     gid = c.lastrowid
-    db.commit()
-
-    # Commit its state
-    c.execute(
-        """ INSERT INTO state (state, game_id) VALUES (?, ?) """,
-        (state, gid),
-    )
-    db.commit()
 
     return gid
+
+def insert_game_state(game_id, state):
+    """Add a state to a game"""
+
+    c.execute(
+        """ INSERT INTO state (state, game_id) VALUES (?, ?) """,
+        (dumps(state), game_id),
+    )
+    db.commit()
 
 def get_game_state(gid):
     """Return most current state of a game"""
@@ -61,6 +76,8 @@ def get_game_state(gid):
         """ SELECT state FROM state WHERE game_id=? ORDER BY modified DESC """,
         (gid,),
     )
+
     # TODO: Error handling
     _state = c.fetchone()
-    return _state["state"] 
+    return loads(_state['state'])
+
