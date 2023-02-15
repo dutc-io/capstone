@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
+
 from enum import Enum
-from json import dumps, loads
 from random import Random
-from typing import Union
+from typing import Dict, List, ClassVar, Union
 from operator import or_
 from functools import cached_property, reduce
 from itertools import islice, product, tee
 from contextlib import contextmanager
-from collections import deque, namedtuple
-from dataclasses import dataclass, replace
+from collections import defaultdict, deque
+
+from pydantic import BaseModel
 
 nwise = lambda g, *, n=2: zip(*(islice(g, i, None) for i, g in enumerate(tee(g, n))))
 
@@ -21,114 +22,112 @@ class MissingPlayerException(Exception):
     ...
 
 
-Suit = Enum(
-    "Suit",
-    """
-    Diamond Club
-    Heart Spade
-""",
-)
-Rank = Enum(
-    "Rank",
-    """
-    Two Three Four Five Six
-    Seven Eight Nine Ten
-    Jack Queen King Ace
-""",
-)
+class Suit(Enum):
+    Diamond = "Diamond"
+    Club = "Club"
+    Heart = "Heart"
+    Spade = "Spade"
 
 
-class Card(namedtuple("Card", "rank suit")):
-    SUITS = {
-        Suit.Diamond: "\N{black diamond suit}",
-        Suit.Club: "\N{black club suit}",
-        Suit.Heart: "\N{black heart suit}",
-        Suit.Spade: "\N{black spade suit}",
+class Rank(Enum):
+    Two = "Two"
+    Three = "Three"
+    Four = "Four"
+    Five = "Five"
+    Six = "Six"
+    Seven = "Seven"
+    Eight = "Eight"
+    Nine = "Nine"
+    Ten = "Ten"
+    Jack = "Jack"
+    Queen = "Queen"
+    King = "King"
+    Ace = "Ace"
+
+
+class Card(BaseModel):
+    rank: Rank
+    suit: Suit
+
+    SUITS: ClassVar[dict] = {
+        "Diamond": "\N{black diamond suit}",
+        "Club": "\N{black club suit}",
+        "Heart": "\N{black heart suit}",
+        "Spade": "\N{black spade suit}",
     }
-    RANKS = {
-        Rank.Two: " 2 ",
-        Rank.Three: " 3 ",
-        Rank.Four: " 4 ",
-        Rank.Five: " 5 ",
-        Rank.Six: " 6 ",
-        Rank.Seven: " 7 ",
-        Rank.Eight: " 8 ",
-        Rank.Nine: " 9 ",
-        Rank.Ten: " 10",
-        Rank.Jack: " J ",
-        Rank.Queen: " Q ",
-        Rank.King: " K ",
-        Rank.Ace: " A ",
+    RANKS: ClassVar[dict] = {
+        "Two": " 2 ",
+        "Three": " 3 ",
+        "Four": " 4 ",
+        "Five": " 5 ",
+        "Six": " 6 ",
+        "Seven": " 7 ",
+        "Eight": " 8 ",
+        "Nine": " 9 ",
+        "Ten": " 10",
+        "Jack": " J ",
+        "Queen": " Q ",
+        "King": " K ",
+        "Ace": " A ",
     }
-    VALUES = {
-        Rank.Ace: 1,
-        Rank.Two: 2,
-        Rank.Three: 3,
-        Rank.Four: 4,
-        Rank.Five: 5,
-        Rank.Six: 6,
-        Rank.Seven: 7,
-        Rank.Eight: 8,
-        Rank.Nine: 9,
-        Rank.Ten: 10,
+    VALUES: ClassVar[dict] = {
+        "Ace": 1,
+        "Two": 2,
+        "Three": 3,
+        "Four": 4,
+        "Five": 5,
+        "Six": 6,
+        "Seven": 7,
+        "Eight": 8,
+        "Nine": 9,
+        "Ten": 10,
+        "Jack": 10,
+        "Queen": 10,
+        "King": 10,
     }
 
-    @classmethod
-    def from_json(cls, obj):
-        _raw = loads(obj)
-        return cls(rank=Rank(_raw["rank"]), suit=Suit(_raw["suit"]))
+    class Config:
+        # keep_untouched = (cached_property,)
+        use_enum_values = True
 
-    def to_json(self):
-        return dumps({"rank": self.rank.value, "suit": self.suit.value})
-
-    @cached_property
+    @property
     def value(self):
-        return self.VALUES.get(self.rank)
+        return self.VALUES[self.rank]
 
-    @cached_property
+    @property
     def symbol(self):
-        if self.suit in {Suit.Heart, Suit.Diamond}:
+        if self.suit in {"Heart", "Diamond"}:
             return (
                 f"\033[1;41m{self.RANKS[self.rank]}{self.SUITS[self.suit]} \033[1;37;0m"
             )
         return f"\033[1;7m{self.RANKS[self.rank]}{self.SUITS[self.suit]} \033[1;37;0m"
 
-
-STANDARD_DECK = [Card(r, s) for r, s in product(Rank, Suit)]
-
-# trail: discard
-# combine: build
-# pair: capture
+    def __hash__(self):
+        return hash((self.rank, self.suit))
 
 
-@dataclass(frozen=True)
-class Player:
+STANDARD_DECK = [Card(rank=r, suit=s) for r, s in product(Rank, Suit)]
+
+
+class Player(BaseModel):
     name: str
     points: int = 0
 
-    @classmethod
-    def from_name(cls, name):
-        return cls(name=name)
+    def __hash__(self):
+        # XXX: Hmmm... Can their be two players with the same name?
+        return hash((self.name, self.points))
 
-    @classmethod
-    def from_json(cls, obj):
-        return cls(**loads(obj))
 
-    def to_json(self):
-        return dumps(self.__dict__)
+class Unit(BaseModel):
+    cards: List[Card]
+    value: int | None = None
 
     def __hash__(self):
-        return hash(self.name)
-
-
-@dataclass(frozen=True)
-class Unit:
-    cards: frozenset[Card]
-    value: Union[int, None] = None
+        return hash((tuple(self.cards), self.value))
 
     @classmethod
     def from_card(cls, card):
-        return cls(cards=frozenset({card}), value=card.value)
+        return cls(cards=[card], value=card.value)
 
     def render(self):
         if len(self.cards):
@@ -140,76 +139,17 @@ class Unit:
             raise ValueError("cannot combine")
         if (self.value + other.value) > max(Card.VALUES.values()):
             raise ValueError("cannot combine")
-        return Unit(
-            cards=frozenset({*self.cards, *other.cards}), value=self.value + other.value
-        )
-
-    @classmethod
-    def from_json(cls, obj):
-        _raw = loads(obj)
-        print("JSON:")
-        print(_raw)
-        return cls(
-            cards=frozenset([Card.from_json(dumps(c)) for c in _raw["cards"]]),
-            value=_raw["value"]
-        )
-
-    def to_json(self):
-        return dumps(
-            {
-                "cards": [{"rank": r.value, "suit": s.value} for r, s in nwise(self.cards)],
-                "value": self.value,
-            }
-        )
-
-    def __hash__(self):
-        return hash(self.cards)
+        return Unit(cards=[*self.cards, *other.cards], value=self.value + other.value)
 
 
-@dataclass(frozen=True)
-class State:
-    deck: deque[Card]
-    table: frozenset[Unit]
-    players: frozenset[Player]
-    hands: dict[Player, frozenset[Card]]
-    capture: dict[Player, frozenset[Card]]
-    player_order: deque[Player]
-
-    def to_json(self):
-        return dumps(
-            {
-                "deck": [c.to_json() for c in self.deck],
-                "table": [u.to_json() for u in self.table],
-                "players": [p.to_json() for p in self.players],
-                "hands": {
-                    player.to_json(): [c.to_json() for c in cards]
-                    for (player, cards) in self.hands.items()
-                },
-                "capture": {
-                    player.to_json(): [c.to_json() for c in cards]
-                    for (player, cards) in self.capture.items()
-                },
-                "player_order": [p.to_json() for p in self.player_order],
-            }
-        )
-
-    @classmethod
-    def from_json(cls, obj):
-        _raw = loads(obj)
-        return cls(
-            deck=deque([Card.from_json(c) for c in _raw["deck"]]),
-            table=frozenset([Unit.from_json(u) for u in _raw["table"]]),
-            players=frozenset([Player.from_json(p) for p in _raw["players"]]),
-            hands={
-                Player.from_json(p): frozenset([Card.from_json(c) for c in cs])
-                for p, cs in _raw["hands"].items()
-            },
-            capture={
-                Player.from_json(p): frozenset([Card.from_json(c) for c in cs])
-                for p, cs in _raw["capture"].items()
-            },
-            player_order=deque([Player.from_json(p) for p in _raw["player_order"]]),
-        )
+class State(BaseModel):
+    deck: list[Card]
+    table: list[Unit]
+    # XXX: Validate no more then six
+    players: list[Player]
+    player_order: List[Player]
+    hands: Dict[str, List[Card]] 
+    capture: Dict[str, List[Card]] | None = None
 
     @contextmanager
     def players_turn(self, player_name):
@@ -222,102 +162,139 @@ class State:
         if not _player:
             raise MissingPlayerException(f"Could not find player {player_name!r}")
 
-        if _player is not self.player_order[0]:
+        # XXX: Think about the equality here
+        if _player != self.player_order[0]:
             raise NotTurnException(f"Not {player_name!r}'s turn")
 
-        player = self.player_order.popleft()
+        player = self.player_order.pop(0)
         try:
             yield player
         finally:
             self.player_order.append(player)
 
     @classmethod
-    def from_players(cls, deck, *players):
+    def from_players(cls, deck, players):
+        # XXX: We should fix how this deals and go 2 at a time to everyone.
+
+        player_order = players
+
+        hands = defaultdict(list)
+        for p in players:
+            for _ in range(2):
+                card_one = deck.pop()
+                card_two = deck.pop()
+                hands[p.name].append(card_one)
+                hands[p.name].append(card_two)
+
+        table = [Unit.from_card(deck.pop()) for _ in range(4)]
+        hands = {pl_name: cards for pl_name, cards in hands.items()}
+
         return cls(
             deck=deck,
-            table=frozenset(),
-            players=frozenset(players),
-            hands={pl: frozenset() for pl in players},
-            capture={pl: frozenset() for pl in players},
-            player_order=deque(players),
+            table=table,
+            players=players,
+            hands=hands,
+            capture={pl.name: [] for pl in players},
+            player_order=player_order,
         )
 
-    def with_deal(self):
-        deck = [*self.deck]
-        table = {*self.table}
-        hands = {pl: {*h} for pl, h in self.hands.items()}
-        for _ in range(2):
-            for h in hands.values():
-                h.update(deck.pop() for _ in range(2))
-            table.update(Unit.from_card(deck.pop()) for _ in range(2))
-        return replace(
-            self,
+    def with_discard(self, player, card_idx):
+        with self.players_turn(player) as current_player:
+            deck = [*self.deck]
+            table = [*self.table]
+            hands = {}
+            for pl_name, h in self.hands.items():
+                # Discard
+                # XXX: Ugly string compareison... What if two players have the same name
+                if pl_name == current_player.name:
+                    # Players hand
+                    hand = [*self.hands[current_player.name]]
+                    # The card to discard to the table
+                    # Remove from players hand
+                    card = hand.pop(card_idx)
+                    # Add to the tables hand
+                    table.append(Unit.from_card(card))
+                    # Deal the player another card automatically
+                    hand.append(deck.pop())
+                    # Replace the players hand with the new hand
+                    hands[current_player.name] = hand
+                else:
+                    # Not the player so just keep everything the same
+                    hands[pl_name] = h
+
+        # This introduces the df = df(...) idea. Should we write our own
+        # replace? This feels kinda clumbsy.
+        return State(
             deck=deck,
-            table=frozenset(table),
-            hands={k: frozenset(v) for k, v in hands.items()},
+            table=table,
+            players=self.players,
+            hands=hands,
+            capture=self.capture,
+            player_order=self.player_order,
         )
 
-    def with_discard(self, player, card):
-        deck = [*self.deck]
-        table = {*self.table}
-        hand = {*self.hands[player]}
+    def with_build(self, player, card_idx, target_idx):
+        with self.players_turn(player) as current_player:
+            deck = self.deck
+            table = self.table
+            hand = self.hands[current_player.name]
 
-        hand.remove(card)
-        table.add(Unit.from_card(card))
-        hand.add(deck.pop())
+            card = hand.pop(card_idx)
+            # Add a card to the table unit
+            table[target_idx].cards.append(card)
+            hand.append(deck.pop())
 
-        return replace(
-            self,
+        return State(
             deck=deck,
-            table=frozenset(table),
-            hands={**self.hands, player: frozenset(hand)},
+            table=table,
+            players=self.players,
+            hands={**self.hands, current_player.name: hand},
+            capture=self.capture,
+            player_order=self.player_order,
         )
 
-    def with_build(self, player, card, *targets):
-        deck = [*self.deck]
-        table = {*self.table}
-        hand = {*self.hands[player]}
+    def with_capture(self, player, card_idx, target_idx):
+        with self.players_turn(player) as current_player:
+            deck = self.deck
+            table = self.table
+            hand = self.hands[current_player.name]
+            capture = self.capture[current_player.name]
 
-        hand.remove(card)
-        table.difference_update(targets)
-        table.add(reduce(or_, {*targets, Unit.from_card(card)}))
-        hand.add(deck.pop())
+            card = hand.pop(card_idx)
 
-        return replace(
-            self,
+            if not all(u.value == card.value for u in table[target_idx].cards):
+                raise ValueError(f"cannot capture {target_idx} with {card}")
+
+            # Capture was successful, remove the card and the table card
+            # XXX: Need to add this to capture
+            table_unit_captured = table.pop(target_idx)
+
+            # Not sure what capture should look like
+            capture.append(table_unit_captured)
+
+            hand.append(deck.pop())
+
+        return State(
             deck=deck,
-            table=frozenset(table),
-            hands={**self.hands, player: frozenset(hand)},
-        )
-
-    def with_capture(self, player, card, *targets):
-        deck = [*self.deck]
-        table = {*self.table}
-        hand = {*self.hands[player]}
-
-        if not all(card.value == t.value for t in targets):
-            raise ValueError(f"cannot capture {targets} with {card}")
-
-        hand.remove(card)
-        table.difference_update(targets)
-        hand.add(deck.pop())
-
-        return replace(
-            self,
-            deck=deck,
-            table=frozenset(table),
-            hands={**self.hands, player: frozenset(hand)},
+            table=table,
+            players=self.players,
+            hands={**self.hands, current_player.name: hand},
+            capture={**self.capture, current_player.name: capture},
+            player_order=self.player_order,
         )
 
     def render(self):
-        return (
-            "",
-            f"Current Turn: {self.player_order[0].name}",
-            f"Table: {' '.join(u.render() for u in self.table)}\n",
-            *(
-                f"{p.name:<8} {'  '.join(c.symbol for c in h)}"
-                for p, h in sorted(self.hands.items(), key=lambda pl_h: pl_h[0].name)
-            ),
+        # XXX: Make these line up! This is so annoying
+        return "".join(
+            [
+                "",
+                f"Current Turn: {self.player_order[0].name}\n",
+                f"Table: {' '.join(u.render() for u in self.table)}\n",
+                *(
+                    f"\n{p:<8} {'  '.join(c.symbol for c in h)} \n"
+                    for p, h in sorted(self.hands.items(), key=lambda pl_h: pl_h)
+                ),
+            ]
         )
 
 
@@ -328,47 +305,44 @@ def game(players, seed=0, _deck=None):
     else:
         deck = [c for c in STANDARD_DECK]
         rnd.shuffle(deck)
-    state = State.from_players(deck, *players)
-    state = state.with_deal()
+    state = State.from_players(deck, players)
 
     return state
 
 
 if __name__ == "__main__":
 
-    # DECK = [c for c in STANDARD_DECK]
-    # deck = [d for d in DECK if d.rank.value in [2, 3, 5]]
-    # print(f" ".join([c.symbol for c in deck]))
-    # player_to_create = "Hyacinth"
-    # player = Player.from_name(player_to_create)
+    players = [
+        Player(name="Hyacinth"),
+        Player(name="Rose"),
+        Player(name="Daisy"),
+        Player(name="Onslow"),
+    ]
+    state = game(players)
+
+    serilaized = state.dict()
+
+    state = State(**serilaized)
+    print(state.render())
+    print(" ")
+    # print(state.render())
+    # state = state.with_discard("Hyacinth", 1)
+    # print(" ")
+    # # print(state.render())
+    # state = state.with_discard("Rose", 1)
+    # print(" ")
+    # # print(state.render())
+    # state = state.with_discard("Daisy", 1)
+    # print(" ")
+    # # print(state.render())
+    # state = state.with_capture("Onslow", 1, 2)
     #
-    # state = State.from_players(deck, *[player])
-    # state = state.with_deal()
-    # sjson = state.to_json()
-    # with open("woop.json", "wt") as fp:
-    #     import json
-    #     json.dump(sjson, fp)
-
-    queen_of_heards = Card(rank=Rank.Queen, suit=Suit.Heart)
-    print(queen_of_heards.to_json())
-    unit = Unit(cards=frozenset(queen_of_heards), value=1)
-    uj = unit.to_json()
-    print(uj)
-    _unit = Unit.from_json(uj)
-    print(_unit)
-    # print(unit.to_json())
-
-    # a = Unit.from_json(serialized)
-
-    # print(dir(queen_of_heards))
-    # serialized = queen_of_heards.to_json()
-    # print(serialized)
-
-    # player_to_create = "Hyacinth"
-    # player = Player.from_name(player_to_create)
+    # print(" ")
+    # # print(state.render())
+    # state = state.with_build("Hyacinth", 1, 0)
     #
-    # print(player.to_json())
-
-    # DECK = [c for c in STANDARD_DECK]
-    # deck = [d for d in DECK if d.rank.value in [2, 3, 5]]
-    # print(f" ".join([c.symbol for c in deck]))
+    # print(state.render())
+    # from json import dump
+    #
+    # with open("state_dump.json", "wt") as fp:
+    #     dump(state.dict(), fp, indent=2)

@@ -3,6 +3,8 @@ services:
     image: dutc-io/capstone_frontend:1.0.0 
     ports:
       - "${REACT_PORT:-3000}:3000"
+    environment:
+      VITE_DEVELOPMENT: PRODUCTION 
     command: npm run dev 
 
   backend:

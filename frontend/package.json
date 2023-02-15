@@ -27,6 +27,7 @@
   "dependencies": {
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
+    "react-query": "^3.39.3",
     "react-router-dom": "^6.6.1"
   }
 }

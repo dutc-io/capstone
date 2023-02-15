@@ -1,111 +1,139 @@
-from os import wait
+from collections import deque
+from typing import List
 from pytest import raises
-from json import dumps
 
-from engine import (
-    Card,
-    game,
-    MissingPlayerException,
-    Player,
-    Rank,
-    STANDARD_DECK,
-    Suit,
-    Unit,
-    State,
-)
-
-# Smoke tests (that basically test that pytest is working). But maybe a
-# starting porint?
-
-# python hashseed set to 0 via export PYTHONHASHSEED=0
+from engine import Card, Player, Rank, State, Suit, Unit, STANDARD_DECK
 
 DECK = [c for c in STANDARD_DECK]
 
+state_serialized = {
+    "deck": [
+        {"rank": "Two", "suit": "Diamond"},
+        {"rank": "Two", "suit": "Club"},
+        {"rank": "Two", "suit": "Heart"},
+        {"rank": "Two", "suit": "Spade"},
+        {"rank": "Three", "suit": "Diamond"},
+        {"rank": "Three", "suit": "Club"},
+        {"rank": "Three", "suit": "Heart"},
+        {"rank": "Three", "suit": "Spade"},
+        {"rank": "Four", "suit": "Diamond"},
+        {"rank": "Four", "suit": "Club"},
+        {"rank": "Four", "suit": "Heart"},
+        {"rank": "Four", "suit": "Spade"},
+        {"rank": "Five", "suit": "Diamond"},
+        {"rank": "Five", "suit": "Club"},
+        {"rank": "Five", "suit": "Heart"},
+        {"rank": "Five", "suit": "Spade"},
+        {"rank": "Six", "suit": "Diamond"},
+        {"rank": "Six", "suit": "Club"},
+        {"rank": "Six", "suit": "Heart"},
+        {"rank": "Six", "suit": "Spade"},
+        {"rank": "Seven", "suit": "Diamond"},
+        {"rank": "Seven", "suit": "Club"},
+        {"rank": "Seven", "suit": "Heart"},
+        {"rank": "Seven", "suit": "Spade"},
+        {"rank": "Eight", "suit": "Diamond"},
+        {"rank": "Eight", "suit": "Club"},
+        {"rank": "Eight", "suit": "Heart"},
+        {"rank": "Eight", "suit": "Spade"},
+        {"rank": "Nine", "suit": "Diamond"},
+        {"rank": "Nine", "suit": "Club"},
+        {"rank": "Nine", "suit": "Heart"},
+        {"rank": "Nine", "suit": "Spade"},
+        {"rank": "Ten", "suit": "Diamond"},
+        {"rank": "Ten", "suit": "Club"},
+        {"rank": "Ten", "suit": "Heart"},
+        {"rank": "Ten", "suit": "Spade"},
+        {"rank": "Jack", "suit": "Diamond"},
+        {"rank": "Jack", "suit": "Club"},
+        {"rank": "Jack", "suit": "Heart"},
+        {"rank": "Jack", "suit": "Spade"},
+    ],
+    "table": [
+        {"cards": [{"rank": "Queen", "suit": "Spade"}], "value": 10},
+        {"cards": [{"rank": "Queen", "suit": "Heart"}], "value": 10},
+        {"cards": [{"rank": "Queen", "suit": "Club"}], "value": 10},
+        {"cards": [{"rank": "Queen", "suit": "Diamond"}], "value": 10},
+    ],
+    "players": [{"name": "Hyacinth", "points": 0}, {"name": "Onslow", "points": 0}],
+    "player_order": [
+        {"name": "Hyacinth", "points": 0},
+        {"name": "Onslow", "points": 0},
+    ],
+    "hands": {
+        "Hyacinth": [
+            {"rank": "Ace", "suit": "Spade"},
+            {"rank": "Ace", "suit": "Heart"},
+            {"rank": "Ace", "suit": "Club"},
+            {"rank": "Ace", "suit": "Diamond"},
+        ],
+        "Onslow": [
+            {"rank": "King", "suit": "Spade"},
+            {"rank": "King", "suit": "Heart"},
+            {"rank": "King", "suit": "Club"},
+            {"rank": "King", "suit": "Diamond"},
+        ],
+    },
+    "capture": {"Hyacinth": [], "Onslow": []},
+}
 
-def test_players_to_json():
 
-    player_to_create = "Hyacinth"
-    player = Player.from_name(player_to_create)
-    serialized = player.to_json()
+def test_card_serialization():
 
-    assert serialized == dumps({"name": "Hyacinth", "points": 0})
+    card = Card(suit=Suit.Spade, rank=Rank.Ace)
+    serilaized = card.dict()
+    new_card = Card(**serilaized)
 
+    assert serilaized == {"rank": "Ace", "suit": "Spade"}
 
-def test_players_from_json():
+    assert type(new_card) is Card
+    assert new_card.rank == "Ace"
+    assert new_card.suit == "Spade"
 
-    serialized = dumps({"name": "Hyacinth", "points": 0})
-    player = Player.from_json(serialized)
-
-    assert player.name == "Hyacinth"
-    assert player.points == 0
-    assert type(player) == Player
+    assert card == new_card
 
 
-def test_card_to_json():
+def test_player_serialization():
 
-    queen_of_heards = Card(rank=Rank.Queen, suit=Suit.Heart)
-    serialized = queen_of_heards.to_json()
+    player = Player(name="Hyacinth")
+    serilaized = player.dict()
+    new_player = Player(**serilaized)
 
-    assert serialized == dumps({"rank": 11, "suit": 3})
+    assert serilaized == {"name": "Hyacinth", "points": 0}
 
-
-def test_card_from_json():
-
-    serialized = dumps({"rank": 11, "suit": 3})
-    queen_of_heards = Card.from_json(serialized)
-
-    assert type(queen_of_heards) == Card
-    assert queen_of_heards.rank == Rank.Queen
-    assert queen_of_heards.suit == Suit.Heart
+    assert type(new_player) is Player
+    assert new_player.points == 0
+    assert new_player.name == "Hyacinth"
 
 
-def test_unit_to_json():
+def test_unit_serialization():
+    cards = [Card(suit=Suit.Spade, rank=Rank.Ace), Card(suit=Suit.Heart, rank=Rank.Ace)]
+    unit = Unit.from_card(cards[0])
+    serilaized = unit.dict()
+    new_unit = Unit(**serilaized)
 
-    queen_of_heards = Card(rank=Rank.Queen, suit=Suit.Heart)
-    unit = Unit(cards=frozenset(queen_of_heards), value=1)
+    # XXX: serialized doesn't match exactly what we expect
+    assert serilaized == {
+        "cards": [{"rank": "Ace", "suit": "Spade", "value": 1}],
+        "value": 1,
+    }
+    assert unit == new_unit
 
-    serialized = unit.to_json()
-    assert serialized == "{\"cards\": [{\"rank\": 11, \"suit\": 3}], \"value\": 1}"
-
-def test_unit_from_json():
-
-    queen_of_heards = Card(rank=Rank.Queen, suit=Suit.Heart)
-    _unit = Unit(cards=frozenset(queen_of_heards), value=1)
-
-    serialized = "{\"cards\": [{\"rank\": 11, \"suit\": 3}], \"value\": 1}"
-
-    unit = Unit.from_json(serialized)
-    assert type(unit) == Unit
-
-def test_state_to_json():
-    state_json = '{"deck": ["{\\"rank\\": 2, \\"suit\\": 1}", "{\\"rank\\": 2, \\"suit\\": 2}", "{\\"rank\\": 2, \\"suit\\": 3}", "{\\"rank\\": 2, \\"suit\\": 4}", "{\\"rank\\": 3, \\"suit\\": 1}", "{\\"rank\\": 3, \\"suit\\": 2}", "{\\"rank\\": 3, \\"suit\\": 3}", "{\\"rank\\": 3, \\"suit\\": 4}", "{\\"rank\\": 5, \\"suit\\": 1}", "{\\"rank\\": 5, \\"suit\\": 2}", "{\\"rank\\": 5, \\"suit\\": 3}", "{\\"rank\\": 5, \\"suit\\": 4}"], "table": [], "players": ["{\\"name\\": \\"Hyacinth\\", \\"points\\": 0}"], "hands": {"{\\"name\\": \\"Hyacinth\\", \\"points\\": 0}": []}, "capture": {"{\\"name\\": \\"Hyacinth\\", \\"points\\": 0}": []}, "player_order": ["{\\"name\\": \\"Hyacinth\\", \\"points\\": 0}"]}'
-
-    DECK = [c for c in STANDARD_DECK]
-    deck = [d for d in DECK if d.rank.value in [2, 3, 5]]
-    player_to_create = "Hyacinth"
-    player = Player.from_name(player_to_create)
-    state = State.from_players(deck, *[player])
-
-    serialized = state.to_json()
-
-    assert serialized == state_json
+    assert type(new_unit) is Unit
+    assert type(new_unit.cards) is list
+    assert new_unit.cards[0].rank == "Ace"
+    assert new_unit.cards[0].suit == "Spade"
+    assert new_unit.value == 1
 
 
-def test_state_from_json():
-    state_json = '{"deck": ["{\\"rank\\": 2, \\"suit\\": 1}", "{\\"rank\\": 2, \\"suit\\": 2}", "{\\"rank\\": 2, \\"suit\\": 3}", "{\\"rank\\": 2, \\"suit\\": 4}", "{\\"rank\\": 3, \\"suit\\": 1}", "{\\"rank\\": 3, \\"suit\\": 2}", "{\\"rank\\": 3, \\"suit\\": 3}", "{\\"rank\\": 3, \\"suit\\": 4}", "{\\"rank\\": 5, \\"suit\\": 1}", "{\\"rank\\": 5, \\"suit\\": 2}", "{\\"rank\\": 5, \\"suit\\": 3}", "{\\"rank\\": 5, \\"suit\\": 4}"], "table": [], "players": ["{\\"name\\": \\"Hyacinth\\", \\"points\\": 0}"], "hands": {"{\\"name\\": \\"Hyacinth\\", \\"points\\": 0}": []}, "capture": {"{\\"name\\": \\"Hyacinth\\", \\"points\\": 0}": []}, "player_order": ["{\\"name\\": \\"Hyacinth\\", \\"points\\": 0}"]}'
+def test_state_serialization():
+    players = [
+        Player(name="Hyacinth"),
+        Player(name="Onslow"),
+    ]
+    state = State.from_players(DECK, players)
+    serilaized = state.dict()
+    new_state = State(**serilaized)
 
-    DECK = [c for c in STANDARD_DECK]
-    deck = [d for d in DECK if d.rank.value in [2, 3, 5]]
-    player_to_create = "Hyacinth"
-    player = Player.from_name(player_to_create)
-    state = State.from_players(deck, *[player])
-
-    state_from_json = State.from_json(state_json)
-
-    print(state)
-    print(" ")
-    print(state_from_json)
-    print(" ")
-
-    assert type(state_from_json) == State
-    assert state_from_json.deck[0] == Card(rank=Rank.Three, suit=Suit.Diamond)
+    assert serilaized == state_serialized
+    assert type(new_state) is State
