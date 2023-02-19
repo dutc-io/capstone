@@ -1,10 +1,9 @@
 import { useDrop } from "react-dnd";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { useQuery } from "react-query";
 import Hand from "../../components/Hand";
-import { FetchState } from "../../requests/stateRequests"
-
+import { FetchState } from "../../requests/stateRequests";
 
 const fakeAPIResponse = {
   table: [
@@ -25,10 +24,30 @@ export default function GamePlayPage() {
   const [apiCall, setApiCall] = useState("");
   const [table, setTable] = useState(fakeAPIResponse.table);
   const [player, setPlayer] = useState(fakeAPIResponse.player);
-  // const { isLoading, error, data } = useQuery({
-  //   queryKey: ["gameState"], // We prob don't want to cache this
-  //   queryFn: () => FetchState(1) // Need game ID
-  // });
+
+  const { isLoading, isFetching, error, data } = useQuery({
+    queryKey: ["gameState"], // We prob don't want to cache this
+    queryFn: () => FetchState(1), // Need game ID
+  });
+  useEffect(() => {
+    if (isFetching) {
+      return;
+    }
+    if (!isFetching && data) {
+      const hands = data["hands"];
+      const firstPlayer = hands[Object.keys(hands)[0]]
+
+      // TODO: We need to do some transformation of the data here. 
+      const _table = data["table"];
+
+      console.log("FP: ", firstPlayer)
+      console.log(firstPlayer);
+      console.log("table", _table);
+      // Set to the player you want, for testing current game using jefro
+      setPlayer(firstPlayer);
+      setTable(_table);
+    }
+  }, [isFetching]);
 
   const addPlayer = (c) => setPlayer([...player, c]);
   const playerPopIndex = (i) => {
@@ -90,15 +109,10 @@ export default function GamePlayPage() {
     [table, player]
   );
 
-  // if (isLoading) return (<p>Loading...</p>)
-  // if (error) return (<p>An error has occurred: {error.message}</p>)
+  if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>An error has occurred: {error.message}</p>;
 
-  // For now just take the first player
-  // const state = JSON.parse(data.state)
-  // const firstPlayer = Object.values(state.hands)[0]
-  // // const hand = state.hands
-  // const hand = firstPlayer.map((c)=>JSON.parse(c))
-  // console.log(hand)
+  // console.log(data)
 
   if (player === null || table === null) {
     return <p>loading</p>;
