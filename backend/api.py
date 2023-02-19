@@ -61,7 +61,10 @@ def game_action():
     description="Return the state of a game",
     response_model=State,
 )
-async def game_state(game_id: int):
+async def game_state(request: Request, game_id: int, response: Response):
+    # XXX: Hack CORS for now.
+    response.headers["Access-Control-Allow-Origin"] = request.headers["Origin"]
+
     gs = get_game_state(game_id)
     state = State(**gs)
     return state
